@@ -465,8 +465,6 @@ function initEditorControls() {
         durationInput.addEventListener('input', handleManualInput);
     }
 
-    saveStateForUndo(appState.subtitles);
-
     // Adiciona o event listener para o novo botão 'Tocar Trecho'
     const playSegmentButton = document.getElementById('playSegmentButton');
     if (playSegmentButton) {
@@ -540,48 +538,33 @@ function updateFinalTime() {
 }
 
 /**
- * Atualiza os dados da legenda ativa (a que está selecionada).
+ * Atualiza os dados da legenda ativa.
  * Pega os valores do painel de edição e os salva no estado (appState)
- * e também atualiza a visualização na lista de legendas.
+ * e salva no histórico, **incluindo o ID do item alterado**.
  */
 function updateActiveSubtitleData() {
-    // 1. Encontrar o item selecionado e seu ID
     const selectedItem = document.querySelector('#subtitle-list .subtitle-item.selected');
     if (!selectedItem) {
-        return; // Nenhuma legenda selecionada, não faz nada
+        return;
     }
     const subtitleId = parseInt(selectedItem.dataset.id, 10);
-
-    // 2. Encontrar o objeto da legenda no nosso array de dados
     const subtitleObject = appState.subtitles.find(sub => sub.id === subtitleId);
     if (!subtitleObject) {
         return;
     }
 
-    // 3. Pegar os valores atuais do painel de edição
+    // Pega os valores atuais do painel de edição
     const newStartTime = document.getElementById('edit-start').value;
     const newEndTime = document.getElementById('edit-end').value;
     const newText = document.getElementById('edit-text').value;
 
-    // 4. Atualizar o objeto da legenda no array 'appState' (SALVAR OS DADOS)
+    // Atualiza o objeto da legenda no array 'appState'
     subtitleObject.startTime = newStartTime;
     subtitleObject.endTime = newEndTime;
     subtitleObject.text = newText;
-
-    // 5. Atualizar o HTML na lista de legendas para refletir a mudança (ATUALIZAR A VISUALIZAÇÃO)
-    const timeDisplay = selectedItem.querySelector('.subtitle-time');
-    const textDisplay = selectedItem.querySelector('.subtitle-text');
-
-    if (timeDisplay) {
-        timeDisplay.textContent = `${newStartTime} --> ${newEndTime}`;
-    }
-    if (textDisplay) {
-        // Usamos innerHTML aqui para que as quebras de linha (<br>) funcionem
-        textDisplay.innerHTML = newText.replace(/\n/g, '<br>');
-    }
- 
-    // Salva o estado no histórico para desfazer/refazer
-    saveStateForUndo(appState.subtitles);
+    
+    // Agora, salva o estado no histórico e passa o ID da legenda alterada
+    saveStateForUndo(appState.subtitles, subtitleId);
 }
 
 //=========================================================
@@ -674,7 +657,8 @@ function secondsToTimeString(totalSeconds) {
 //===================
 /**
  * Inicializa o event listener para o input de texto da legenda editável
- * para que as alterações atualizem o texto do item selecionado na lista.
+ * para que as alterações atualizem o texto do item selecionado na lista
+ * e salvem o estado no histórico.
  */
 function initTextEditListener() {
     const textInput = document.getElementById('edit-text');
@@ -687,48 +671,55 @@ function initTextEditListener() {
         // Atualiza o texto do item na lista ao digitar no input
         const textDisplay = selectedItem.querySelector('.subtitle-text');
         if (textDisplay) {
-            // Substitui quebras de linha por <br> para preservar formatação
             textDisplay.innerHTML = textInput.value.replace(/\n/g, '<br>');
         }
-
-        // Atualiza o estado da legenda no appState (para salvar depois)
-        const subtitleId = parseInt(selectedItem.dataset.id, 10);
-        const subtitleObject = appState.subtitles.find(sub => sub.id === subtitleId);
-        if (subtitleObject) {
-            subtitleObject.text = textInput.value;
-        }
+        
+        // Chamada para a função central que salva os dados
+        updateActiveSubtitleData();
     });
 }
 
-//====================================
+//==========================
 // Bloco fx desfazer/refazer
-//====================================
+//==========================
 const undoStack = [];
 const redoStack = [];
 
-function saveStateForUndo(state) {
-    undoStack.push(JSON.parse(JSON.stringify(state))); // clone profundo
-    redoStack.length = 0;  // limpa redo ao salvar novo estado
+/**
+ * Salva o estado atual no histórico de 'desfazer'.
+ * @param {Array<Object>} state O array de legendas atual.
+ * @param {number|null} [changedSubtitleId=null] O ID do subtítulo que foi alterado.
+ */
+function saveStateForUndo(state, changedSubtitleId = null) {
+    // Guarda o estado e o ID do item que foi alterado
+    undoStack.push({ state: JSON.parse(JSON.stringify(state)), activeId: changedSubtitleId });
+    redoStack.length = 0; // limpa redo ao salvar novo estado
     updateUndoRedoButtons();
 }
 
 function undoAction() {
     if (undoStack.length === 0) return;
     const currentState = JSON.parse(JSON.stringify(appState.subtitles));
-    const prevState = undoStack.pop();
-    redoStack.push(currentState);
-    appState.subtitles = prevState;
-    refreshUIWithNewState();
+    const prevEntry = undoStack.pop();
+    
+    redoStack.push({ state: currentState, activeId: prevEntry.activeId });
+    appState.subtitles = prevEntry.state;
+    
+    // Passa o ID da legenda que deve ser selecionada
+    refreshUIWithNewState(prevEntry.activeId);
     updateUndoRedoButtons();
 }
 
 function redoAction() {
     if (redoStack.length === 0) return;
     const currentState = JSON.parse(JSON.stringify(appState.subtitles));
-    const nextState = redoStack.pop();
-    undoStack.push(currentState);
-    appState.subtitles = nextState;
-    refreshUIWithNewState();
+    const nextEntry = redoStack.pop();
+    
+    undoStack.push({ state: currentState, activeId: nextEntry.activeId });
+    appState.subtitles = nextEntry.state;
+    
+    // Passa o ID da legenda que deve ser selecionada
+    refreshUIWithNewState(nextEntry.activeId);
     updateUndoRedoButtons();
 }
 
@@ -737,37 +728,36 @@ function updateUndoRedoButtons() {
     document.getElementById('redoBtn').disabled = redoStack.length === 0;
 }
 
-function refreshUIWithNewState() {
+/**
+ * Restaura o estado da interface com base nos dados mais recentes do appState.
+ * Seleciona a legenda que foi alterada pela última ação.
+ * @param {number|null} idToSelect O ID da legenda a ser selecionada.
+ */
+function refreshUIWithNewState(idToSelect = null) {
+    // Redesenha toda a lista de legendas
     displaySubtitles(appState.subtitles);
 
-    // Encontre a legenda que estava selecionada antes da ação
-    // Usamos o ID para garantir que estamos buscando a legenda correta
-    const selectedItem = document.querySelector('.subtitle-item.selected');
-    const selectedId = selectedItem ? parseInt(selectedItem.dataset.id) : null;
-
+    // Usa o ID que foi passado ou tenta encontrar um ID de fallback
     let subtitleToSelect = null;
-
-    if (selectedId) {
-        // Tenta encontrar a mesma legenda no novo estado
-        subtitleToSelect = appState.subtitles.find(sub => sub.id === selectedId);
+    if (idToSelect) {
+        subtitleToSelect = appState.subtitles.find(sub => sub.id === idToSelect);
     }
-
-    // Se a legenda anterior não for encontrada (por exemplo, foi deletada),
-    // selecione a primeira da lista
+    
+    // Se a legenda anterior não for encontrada, selecione a primeira da lista
     if (!subtitleToSelect && appState.subtitles.length > 0) {
         subtitleToSelect = appState.subtitles[0];
     }
-    
-    // Se uma legenda for encontrada, atualize a interface de edição
+
     if (subtitleToSelect) {
         populateEditor(subtitleToSelect);
-        // Atualiza o destaque visual na lista
-        const itemElement = document.querySelector(`[data-id="${subtitleToSelect.id}"]`);
-        if (itemElement) {
-            updateSelectionVisuals(itemElement);
+        
+        const elemToSelect = document.querySelector(`[data-id="${subtitleToSelect.id}"]`);
+        if (elemToSelect) {
+            updateSelectionVisuals(elemToSelect);
         }
+        
+        playVideoSegment(subtitleToSelect.startTime, subtitleToSelect.endTime);
     } else {
-        // Se a lista de legendas estiver vazia, limpe o painel de edição
         clearEditorPanel();
     }
 }
@@ -788,16 +778,19 @@ function initSubtitleList() {
 
 /**
  * Manipula o clique em um item na lista de legendas.
- * Encontra a legenda clicada, atualiza a interface de edição e o destaque visual.
+ * A chave aqui é salvar as edições pendentes antes de carregar uma nova legenda.
  * @param {Event} event - O objeto do evento de clique.
  */
 function handleSubtitleClick(event) {
+    // IMPORTANTE: Primeiro, salva as alterações feitas na legenda que estava selecionada.
+    // Isso garante que o histórico de "desfazer" seja preciso.
+    updateActiveSubtitleData(); 
+
     // Encontra o elemento .subtitle-item mais próximo que foi clicado.
-    // Isso funciona mesmo se o clique for em um elemento filho (como o texto ou o tempo).
     const clickedItem = event.target.closest('.subtitle-item');
 
     if (!clickedItem) {
-        return; // Sai da função se o clique não foi em um item de legenda
+        return;
     }
 
     // Pega o ID da legenda a partir do atributo data-id
@@ -810,7 +803,7 @@ function handleSubtitleClick(event) {
         populateEditor(selectedSubtitle); // Preenche os campos do editor
         updateSelectionVisuals(clickedItem); // Atualiza o destaque visual
 
-        // Chama a função para tocar o trecho de vídeo da legenda selecionada
+        // Toca o vídeo do trecho selecionado
         playVideoSegment(selectedSubtitle.startTime, selectedSubtitle.endTime);
     }
 }
