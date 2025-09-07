@@ -186,12 +186,14 @@ class State {
     this.history = this.history.slice(0, this.currentHistoryIndex + 1);
     this.history.push(JSON.parse(JSON.stringify(this.subtitles)));
     this.currentHistoryIndex++;
+    this.updateButtonStates();
   }
 
   undo() {
     if (this.currentHistoryIndex > 0) {
       this.currentHistoryIndex--;
       this.subtitles = JSON.parse(JSON.stringify(this.history[this.currentHistoryIndex]));
+      this.updateButtonStates();
     }
   }
 
@@ -199,6 +201,24 @@ class State {
     if (this.currentHistoryIndex < this.history.length - 1) {
       this.currentHistoryIndex++;
       this.subtitles = JSON.parse(JSON.stringify(this.history[this.currentHistoryIndex]));
+      this.updateButtonStates();
+    }
+  }
+
+  updateButtonStates() {
+    const undoBtn = document.getElementById('undoBtn');
+    const redoBtn = document.getElementById('redoBtn');
+
+    if (this.currentHistoryIndex > 0) {
+      undoBtn.disabled = false;
+    } else {
+      undoBtn.disabled = true;
+    }
+
+    if (this.currentHistoryIndex < this.history.length - 1) {
+      redoBtn.disabled = false;
+    } else {
+      redoBtn.disabled = true;
     }
   }
 }
@@ -301,6 +321,7 @@ class InputManager {
 // init.js
 function init() {
   const state = new State();
+  state.updateButtonStates(); // Adicione essa linha
   const inputManager = new InputManager(state);
 
   // lógica para carregar mídia, edição em lote, etc.
