@@ -29,13 +29,35 @@
             flex-direction: column;
             gap: 1.5rem;
         }
-        
-        .subtitle-item.selected {
-            background-color: var(--active-bg);
-            border-left: 3px solid var(--primary-color);
-            padding-left: 10px; /* Ajuste opcional para o texto não colar na borda */
-        }
 
+        /*css da lista de legenda*/
+        .subtitle-item {
+            display: flex;           /* alinha os filhos na horizontal */
+            align-items: center;     /* centraliza verticalmente ícone e conteúdo */
+            gap: 0.5em;              /* espaço entre ícone e texto */
+            padding-left: 10px;
+        }
+        
+        .play-icon {
+            flex-shrink: 0;          /* evita que o ícone encolha */
+            font-size: 1.2em;
+            color: var(--primary-color);
+            user-select: none;
+        }
+        
+        .subtitle-content {
+            display: flex;
+            flex-direction: column;  /* empilha o tempo e texto verticalmente */
+        }
+        
+        .subtitle-time {
+            font-weight: bold;
+            font-size: 0.9em;
+        }
+        
+        .subtitle-text {
+            font-size: 0.85em;
+        }
 
     </style>
 </head>
@@ -285,8 +307,10 @@ function displaySubtitles(subtitles) {
 
         // Estrutura interna do item da legenda
         subItem.innerHTML = `
-            <div class="subtitle-time">${sub.startTime} --> ${sub.endTime}</div>
-            <div class="subtitle-text">${sub.text.replace(/\n/g, '<br>')}</div>
+            <div class="subtitle-content">
+                <div class="subtitle-time">${sub.startTime} --> ${sub.endTime}</div>
+                <div class="subtitle-text">${sub.text.replace(/\n/g, '<br>')}</div>
+            </div>
         `;
         fragment.appendChild(subItem);
     });
@@ -625,23 +649,33 @@ function populateEditor(subtitle) {
  * @param {HTMLElement} selectedElement - O elemento .subtitle-item que foi clicado.
  */
 function updateSelectionVisuals(selectedElement) {
-    // Procura por qualquer item que já esteja selecionado
     const previouslySelected = document.querySelector('#subtitle-list .subtitle-item.selected');
     
-    // Se houver, remove a classe 'selected' dele
     if (previouslySelected) {
+        // Remove a classe de selecionado
         previouslySelected.classList.remove('selected');
+        // Remove o ícone de play se existir
+        const oldIcon = previouslySelected.querySelector('.play-icon');
+        if (oldIcon) {
+            oldIcon.remove();
+        }
     }
-
-    // Adiciona a classe 'selected' ao novo item clicado
+    // Adiciona a classe 'selected' no novo elemento
     selectedElement.classList.add('selected');
-}
 
+    // Cria o ícone de play e insere como primeiro filho (lado esquerdo)
+    const playIcon = document.createElement('span');
+    playIcon.className = 'play-icon';
+    playIcon.innerHTML = '▶'; // Você pode usar um ícone SVG, imagem ou Unicode
+    
+    // Insere o ícone no início do subtitle-item
+    selectedElement.insertBefore(playIcon, selectedElement.firstChild);
+}
 
 // --- PONTO DE ENTRADA DA APLICAÇÃO ---
 // Garante que o script só execute após o carregamento completo do HTML.
 document.addEventListener('DOMContentLoaded', init);
 
-    </script>
-</body>
+        </script>
+    </body>
 </html>
