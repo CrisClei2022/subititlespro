@@ -1,4 +1,3 @@
-// Subititles Pro
 <!DOCTYPE html>
 <html lang="pt-br">
 <head>
@@ -668,31 +667,35 @@ function updateUndoRedoButtons() {
 function refreshUIWithNewState() {
     displaySubtitles(appState.subtitles);
 
-    // Seleciona a legenda na UI que está ativa (com base em seu ID)
-    // Vamos supor que você mantém o último subtitle selecionado, ou seleciona o primeiro da lista
-    let lastSelectedId = null;
-    const previouslySelected = document.querySelector('#subtitle-list .subtitle-item.selected');
-    if (previouslySelected) {
-        lastSelectedId = parseInt(previouslySelected.dataset.id, 10);
+    // Encontre a legenda que estava selecionada antes da ação
+    // Usamos o ID para garantir que estamos buscando a legenda correta
+    const selectedItem = document.querySelector('.subtitle-item.selected');
+    const selectedId = selectedItem ? parseInt(selectedItem.dataset.id) : null;
+
+    let subtitleToSelect = null;
+
+    if (selectedId) {
+        // Tenta encontrar a mesma legenda no novo estado
+        subtitleToSelect = appState.subtitles.find(sub => sub.id === selectedId);
     }
 
-    // Defina um id de fallback (ex: o primeiro subtitulo)
-    if (lastSelectedId === null && appState.subtitles.length > 0) {
-        lastSelectedId = appState.subtitles[0].id;
+    // Se a legenda anterior não for encontrada (por exemplo, foi deletada),
+    // selecione a primeira da lista
+    if (!subtitleToSelect && appState.subtitles.length > 0) {
+        subtitleToSelect = appState.subtitles[0];
     }
-
-    if (lastSelectedId !== null) {
-        // Atualiza a seleção visual (aplica classe selected)
-        const itemToSelect = document.querySelector(`#subtitle-list .subtitle-item[data-id="${lastSelectedId}"]`);
-        if (itemToSelect) {
-            updateSelectionVisuals(itemToSelect);
-
-            // Atualiza os campos do editor para os dados desse item restaurado
-            const subtitle = appState.subtitles.find(sub => sub.id === lastSelectedId);
-            if (subtitle) {
-                populateEditor(subtitle);
-            }
+    
+    // Se uma legenda for encontrada, atualize a interface de edição
+    if (subtitleToSelect) {
+        populateEditor(subtitleToSelect);
+        // Atualiza o destaque visual na lista
+        const itemElement = document.querySelector(`[data-id="${subtitleToSelect.id}"]`);
+        if (itemElement) {
+            updateSelectionVisuals(itemElement);
         }
+    } else {
+        // Se a lista de legendas estiver vazia, limpe o painel de edição
+        clearEditorPanel();
     }
 }
 
@@ -791,6 +794,15 @@ function updateSelectionVisuals(selectedElement) {
     selectedElement.insertBefore(playIcon, selectedElement.firstChild);
 }
 
+/**
+ * Limpa todos os campos do painel de edição.
+ */
+function clearEditorPanel() {
+    document.getElementById('edit-start').value = '';
+    document.getElementById('edit-end').value = '';
+    document.getElementById('edit-duration').value = '';
+    document.getElementById('edit-text').value = '';
+}
 //==============================================
 // Bloco de fx tocar trecho ao clicar na legenda
 //==============================================
