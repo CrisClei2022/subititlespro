@@ -99,8 +99,10 @@
                         <div class="time-input-wrapper">
                             <input type="text" id="edit-start">
                             <div class="time-adjust-stack">
-                                <button class="time-adjust-btn" data-target="repeatSegmentInput" data-direction="1">+</button>
-                                <button class="time-adjust-btn" data-target="repeatSegmentInput" data-direction="-1">-</button>
+                                <div class="time-adjust-stack">
+                                    <button class="time-adjust-btn" data-target="edit-start" data-direction="1">+</button>
+                                    <button class="time-adjust-btn" data-target="edit-start" data-direction="-1">-</button>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -124,8 +126,9 @@
                     <label for="edit-repeat">Repetir Trecho</label>
                     <div class=""><input type="text" id="repeatSegmentInput"></div>
                     <div class="time-adjust-stack">
-                        <button class="repeat-adjust-btn" data-target="" data-direction="1">+</button>
-                        <button class="repeat-adjust-btn" data-target="" data-direction="-1">-</button>
+                        <button class="repeat-adjust-btn" data-target="repeatSegmentInput" data-direction="1">+</button>
+						<button class="repeat-adjust-btn" data-target="repeatSegmentInput" data-direction="-1">-</button>
+
                     </div>
                     <button id="playSegmentButton">▶ Tocar Trecho</button>
                 </div>
@@ -580,31 +583,25 @@ function updateActiveSubtitleData() {
 // Bloco de fx para ajustar o valor do input repetir trecho
 //========================================================
 function initRepeatSegmentControls() {
-    const repeatInput = document.getElementById('repeatSegmentInput');
     const buttons = document.querySelectorAll('.repeat-adjust-btn');
-
-    buttons.forEach(btn => {
-        btn.addEventListener('click', function(event) {
+    
+    buttons.forEach(button => {
+        button.addEventListener('click', event => {
             event.preventDefault();
+            const targetId = button.dataset.target;
+            const targetInput = document.getElementById(targetId);
+            if (!targetInput) return;
+            
+            let currentValue = parseInt(targetInput.value, 10);
+            if (isNaN(currentValue)) currentValue = 0;
 
-            // Pega o valor atual do input, considera 0 se vazio ou inválido
-            let currentValue = parseInt(repeatInput.value, 10);
-            if (isNaN(currentValue)) {
-                currentValue = 0;
-            }
+            const direction = parseInt(button.dataset.direction, 10);
 
-            // Define o incremento/decremento com base no botão clicado
-            const direction = parseInt(this.dataset.direction, 10);
-
-            // Calcula o novo valor
             let newValue = currentValue + direction;
-
-            // Limita o valor mínimo e máximo
             if (newValue < 0) newValue = 0;
             if (newValue > 99) newValue = 99;
 
-            // Atualiza o input
-            repeatInput.value = newValue;
+            targetInput.value = newValue;
         });
     });
 }
