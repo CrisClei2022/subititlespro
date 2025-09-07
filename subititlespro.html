@@ -667,13 +667,31 @@ function updateUndoRedoButtons() {
 
 function refreshUIWithNewState() {
     displaySubtitles(appState.subtitles);
-    // Se quiser, selecione a legenda atual e atualize o editor para ela
-    const selectedItem = document.querySelector('#subtitle-list .subtitle-item.selected');
-    if (selectedItem) {
-        const id = parseInt(selectedItem.dataset.id, 10);
-        const subtitle = appState.subtitles.find(s => s.id === id);
-        if (subtitle) {
-            populateEditor(subtitle);
+
+    // Seleciona a legenda na UI que está ativa (com base em seu ID)
+    // Vamos supor que você mantém o último subtitle selecionado, ou seleciona o primeiro da lista
+    let lastSelectedId = null;
+    const previouslySelected = document.querySelector('#subtitle-list .subtitle-item.selected');
+    if (previouslySelected) {
+        lastSelectedId = parseInt(previouslySelected.dataset.id, 10);
+    }
+
+    // Defina um id de fallback (ex: o primeiro subtitulo)
+    if (lastSelectedId === null && appState.subtitles.length > 0) {
+        lastSelectedId = appState.subtitles[0].id;
+    }
+
+    if (lastSelectedId !== null) {
+        // Atualiza a seleção visual (aplica classe selected)
+        const itemToSelect = document.querySelector(`#subtitle-list .subtitle-item[data-id="${lastSelectedId}"]`);
+        if (itemToSelect) {
+            updateSelectionVisuals(itemToSelect);
+
+            // Atualiza os campos do editor para os dados desse item restaurado
+            const subtitle = appState.subtitles.find(sub => sub.id === lastSelectedId);
+            if (subtitle) {
+                populateEditor(subtitle);
+            }
         }
     }
 }
