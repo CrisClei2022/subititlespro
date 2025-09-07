@@ -617,6 +617,9 @@ function handleSubtitleClick(event) {
     if (selectedSubtitle) {
         populateEditor(selectedSubtitle); // Preenche os campos do editor
         updateSelectionVisuals(clickedItem); // Atualiza o destaque visual
+
+        // Chama a função para tocar o trecho de vídeo da legenda selecionada
+        playVideoSegment(selectedSubtitle.startTime, selectedSubtitle.endTime);
     }
 }
 
@@ -672,10 +675,52 @@ function updateSelectionVisuals(selectedElement) {
     selectedElement.insertBefore(playIcon, selectedElement.firstChild);
 }
 
+//==============================================
+// Bloco de fx tocar trecho ao clicar na legenda
+//==============================================
+/**
+ * Toca o vídeo do trecho selecionado, do tempo start até o tempo end, ambos strings no formato HH:MM:SS,mmm
+ * Quando o vídeo atingir o tempo end, para automaticamente.
+ * @param {string} startTime - tempo inicial do trecho (ex: "00:00:08,500")
+ * @param {string} endTime - tempo final do trecho (ex: "00:00:11,100")
+ */
+function playVideoSegment(startTime, endTime) {
+    const video = document.getElementById('video-player');
+    if (!video) return;
+
+    // Converte string de tempo em segundos
+    const startSeconds = timeStringToSeconds(startTime);
+    const endSeconds = timeStringToSeconds(endTime);
+
+    // Define o ponto inicial e começa a reproduzir
+    video.currentTime = startSeconds;
+    video.play();
+
+    // Função para monitorar o tempo do vídeo
+    function onTimeUpdate() {
+        if (video.currentTime >= endSeconds) {
+            video.pause();
+            video.removeEventListener('timeupdate', onTimeUpdate);
+        }
+    }
+
+    // Adiciona listener para parar quando alcançar o tempo final
+    video.addEventListener('timeupdate', onTimeUpdate);
+}
+
+/**
+ * Para o vídeo imediatamente.
+ */
+function stopVideo() {
+    const video = document.getElementById('video-player');
+    if (!video) return;
+    video.pause();
+}
+
 // --- PONTO DE ENTRADA DA APLICAÇÃO ---
 // Garante que o script só execute após o carregamento completo do HTML.
 document.addEventListener('DOMContentLoaded', init);
 
-        </script>
-    </body>
+    </script>
+</body>
 </html>
