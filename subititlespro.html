@@ -120,6 +120,9 @@
                     </div>
                     <textarea id="edit-text" placeholder="Selecione uma legenda para editar..."></textarea>
                 </div>
+                <div class="editor-actions">
+                    <button id="playSegmentButton">▶ Tocar Trecho</button>
+                </div>
                 <div class="">
                     <button id="undoBtn" disabled>Desfazer</button>
                     <button id="redoBtn" disabled>Refazer</button>
@@ -447,6 +450,24 @@ function initEditorControls() {
     }
 
     saveStateForUndo(appState.subtitles);
+
+    // Adiciona o event listener para o novo botão 'Tocar Trecho'
+    const playSegmentButton = document.getElementById('playSegmentButton');
+    if (playSegmentButton) {
+        playSegmentButton.addEventListener('click', () => {
+            const selectedItem = document.querySelector('#subtitle-list .subtitle-item.selected');
+            if (selectedItem) {
+                // Pega os tempos do painel de edição, não da lista
+                const newStartTime = document.getElementById('edit-start').value;
+                const newEndTime = document.getElementById('edit-end').value;
+
+                // Toca o trecho de vídeo com os tempos ATUAIS do painel de edição
+                playVideoSegment(newStartTime, newEndTime);
+            } else {
+                alert('Selecione uma legenda primeiro.');
+            }
+        });
+    }
 }
 
 /**
