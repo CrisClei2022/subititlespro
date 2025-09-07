@@ -99,8 +99,8 @@
                         <div class="time-input-wrapper">
                             <input type="text" id="edit-start">
                             <div class="time-adjust-stack">
-                                <button class="time-adjust-btn" data-target="edit-start" data-direction="1">+</button>
-                                <button class="time-adjust-btn" data-target="edit-start" data-direction="-1">-</button>
+                                <button class="time-adjust-btn" data-target="repeatSegmentInput" data-direction="1">+</button>
+                                <button class="time-adjust-btn" data-target="repeatSegmentInput" data-direction="-1">-</button>
                             </div>
                         </div>
                     </div>
@@ -121,6 +121,12 @@
                     <textarea id="edit-text" placeholder="Selecione uma legenda para editar..."></textarea>
                 </div>
                 <div class="editor-actions">
+                    <label for="edit-repeat">Repetir Trecho</label>
+                    <div class=""><input type="text" id="repeatSegmentInput"></div>
+                    <div class="time-adjust-stack">
+                        <button class="repeat-adjust-btn" data-target="" data-direction="1">+</button>
+                        <button class="repeat-adjust-btn" data-target="" data-direction="-1">-</button>
+                    </div>
                     <button id="playSegmentButton">▶ Tocar Trecho</button>
                 </div>
                 <div class="">
@@ -155,6 +161,7 @@
         </div>
     </div>
 
+ 
     <script>
 /**
  * Armazena o estado do aplicativo, como a lista de legendas.
@@ -185,6 +192,7 @@ function init() {
     initEditorControls();
     initSubtitleList();
     initTextEditListener();
+    initRepeatSegmentControls();
 
     // --- Evento no botão carregar mídia existente ---
     const loadButton = document.getElementById('loadButton');
@@ -457,12 +465,10 @@ function initEditorControls() {
         playSegmentButton.addEventListener('click', () => {
             const selectedItem = document.querySelector('#subtitle-list .subtitle-item.selected');
             if (selectedItem) {
-                // Pega os tempos do painel de edição, não da lista
-                const newStartTime = document.getElementById('edit-start').value;
-                const newEndTime = document.getElementById('edit-end').value;
-
-                // Toca o trecho de vídeo com os tempos ATUAIS do painel de edição
-                playVideoSegment(newStartTime, newEndTime);
+                const start = document.getElementById('edit-start').value;
+                const end = document.getElementById('edit-end').value;
+                const repeat = getRepeatSegmentValue();
+                playRepeatedSegment(start, end, repeat);
             } else {
                 alert('Selecione uma legenda primeiro.');
             }
@@ -570,8 +576,52 @@ function updateActiveSubtitleData() {
     saveStateForUndo(appState.subtitles);
 }
 
-// --- FUNÇÕES AUXILIARES DE CONVERSÃO DE TEMPO ---
+//=========================================================
+// Bloco de fx para ajustar o valor do input repetir trecho
+//========================================================
+function initRepeatSegmentControls() {
+    const repeatInput = document.getElementById('repeatSegmentInput');
+    const buttons = document.querySelectorAll('.repeat-adjust-btn');
 
+    buttons.forEach(btn => {
+        btn.addEventListener('click', function(event) {
+            event.preventDefault();
+
+            // Pega o valor atual do input, considera 0 se vazio ou inválido
+            let currentValue = parseInt(repeatInput.value, 10);
+            if (isNaN(currentValue)) {
+                currentValue = 0;
+            }
+
+            // Define o incremento/decremento com base no botão clicado
+            const direction = parseInt(this.dataset.direction, 10);
+
+            // Calcula o novo valor
+            let newValue = currentValue + direction;
+
+            // Limita o valor mínimo e máximo
+            if (newValue < 0) newValue = 0;
+            if (newValue > 99) newValue = 99;
+
+            // Atualiza o input
+            repeatInput.value = newValue;
+        });
+    });
+}
+
+// ---  Capture e retorne o valor do input de repetir trecho ---
+function getRepeatSegmentValue() {
+    const repeatInput = document.getElementById('repeatSegmentInput');
+    let value = parseInt(repeatInput.value, 10);
+    if (isNaN(value) || value < 1) {
+        value = 1; // padrão 1 vez
+    }
+    return value;
+}
+
+//=================================================
+// --- FUNÇÕES AUXILIARES DE CONVERSÃO DE TEMPO ---
+//================================================
 /**
  * Converte uma string de tempo no formato HH:MM:SS,mmm para segundos.
  * @param {string} timeString - A string de tempo a ser convertida.
@@ -833,28 +883,41 @@ function clearEditorPanel() {
  * @param {string} startTime - tempo inicial do trecho (ex: "00:00:08,500")
  * @param {string} endTime - tempo final do trecho (ex: "00:00:11,100")
  */
-function playVideoSegment(startTime, endTime) {
+function playVideoSegment(startTime, endTime, onSegmentEnd = null) {
     const video = document.getElementById('video-player');
     if (!video) return;
-
-    // Converte string de tempo em segundos
     const startSeconds = timeStringToSeconds(startTime);
     const endSeconds = timeStringToSeconds(endTime);
-
-    // Define o ponto inicial e começa a reproduzir
     video.currentTime = startSeconds;
     video.play();
-
-    // Função para monitorar o tempo do vídeo
     function onTimeUpdate() {
         if (video.currentTime >= endSeconds) {
             video.pause();
             video.removeEventListener('timeupdate', onTimeUpdate);
+            if (typeof onSegmentEnd === 'function') {
+                onSegmentEnd();
+            }
         }
     }
-
-    // Adiciona listener para parar quando alcançar o tempo final
     video.addEventListener('timeupdate', onTimeUpdate);
+}
+
+/**
+ *  Toque o trecho repetido n vezese.
+ */
+function playRepeatedSegment(startTime, endTime, repeatCount) {
+    if (repeatCount < 1) repeatCount = 1;
+    let currentRepeat = 0;
+
+    function playNext() {
+        if (currentRepeat >= repeatCount) return;
+        currentRepeat++;
+        playVideoSegment(startTime, endTime, () => {
+            // Callback para tocar novamente após encerrar o trecho
+            playNext();
+        });
+    }
+    playNext();
 }
 
 /**
