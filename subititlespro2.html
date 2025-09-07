@@ -1,0 +1,313 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Editor de Legendas Profissional</title>
+    <style>
+        :root {
+            --background-color: #1a1a1a;
+            --container-bg: #242424;
+            --text-color: #e0e0e0;
+            --input-bg: #333333;
+            --border-color: #444444;
+            --primary-color: #007BFF; /* Azul */
+            --secondary-color: #6c757d; /* Cinza */
+            --active-color: var(--primary-color);
+            --active-bg: #2a3a4a;
+            --danger-color: #f44336; /* Vermelho */
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background-color: var(--background-color);
+            color: var(--text-color);
+            margin: 0;
+            padding: 1.5rem;
+            display: flex;
+            flex-direction: column;
+            gap: 1.5rem;
+        }
+
+        /*css da lista de legenda*/
+        .subtitle-item {
+            display: flex;           /* alinha os filhos na horizontal */
+            align-items: center;     /* centraliza verticalmente ícone e conteúdo */
+            gap: 0.5em;              /* espaço entre ícone e texto */
+            padding-left: 10px;
+        }
+        
+        .play-icon {
+            flex-shrink: 0;          /* evita que o ícone encolha */
+            font-size: 1.2em;
+            color: var(--primary-color);
+            user-select: none;
+        }
+        
+        .subtitle-content {
+            display: flex;
+            flex-direction: column;  /* empilha o tempo e texto verticalmente */
+        }
+        
+        .subtitle-time {
+            font-weight: bold;
+            font-size: 0.9em;
+        }
+        
+        .subtitle-text {
+            font-size: 0.85em;
+        }
+
+    </style>
+</head>
+<body>
+
+    <div class="main-container">
+        <h1>Editor de Legendas Profissional</h1>
+
+        <div class="top-bar">
+            <div class="input-group">
+                <input type="text" id="videoUrl" placeholder="Cole a URL do vídeo ou faça o upload">
+                <label for="videoUpload" class="upload-btn">Upload Vídeo</label>
+                <input type="file" id="videoUpload" accept="video/*">
+            </div>
+            <div class="input-group">
+                <input type="text" id="srtUrl" placeholder="Cole a URL da legenda (.srt) ou faça o upload">
+                <label for="srtUpload" class="upload-btn">Upload .SRT</label>
+                <input type="file" id="srtUpload" accept=".srt">
+            </div>
+            <div class="controls-group">
+                <div class="input-group" style="flex-grow: 1;">
+                    <label for="step-increment">Incremento (s):</label>
+                    <input type="number" id="step-increment" value="0.1" step="0.05" style="max-width: 120px;">
+                </div>
+                <div class="action-buttons">
+                    <button id="loadButton">Carregar Mídia</button>
+                    <button id="batchEditButton">Edição em Lote</button>
+                    <button id="exportButton">Exportar .SRT</button>
+                </div>
+            </div>
+            <p id="error-message"></p>
+        </div>
+
+        <div class="editor-layout">
+            <div class="left-panel">
+                <div class="video-container"><video id="video-player" controls></video></div>
+                <div class="editor-panel">
+                    <div class="subtitle-list-controls" style="margin-bottom: 1rem;">
+                        <button id="addSegmentBtn">+ Adicionar Segmento</button>
+                        <button id="removeSegmentBtn">- Remover Segmento</button>
+                    </div>
+                    <div class="time-control-group">
+                        <label for="edit-start">Início</label>
+                        <div class="time-input-wrapper">
+                            <input type="text" id="edit-start">
+                            <div class="time-adjust-stack">
+                                <div class="time-adjust-stack">
+                                    <button class="time-adjust-btn" data-target="edit-start" data-direction="1">+</button>
+                                    <button class="time-adjust-btn" data-target="edit-start" data-direction="-1">-</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="time-control-group">
+                        <label for="edit-end">Fim</label>
+                        <div class="time-input-wrapper"><input type="text" id="edit-end"></div>
+                    </div>
+                    <div class="time-control-group">
+                        <label for="edit-duration">Duração (s)</label>
+                        <div class="time-input-wrapper">
+                             <input type="text" id="edit-duration">
+                             <div class="time-adjust-stack">
+                                <button class="time-adjust-btn" data-target="edit-duration" data-direction="1">+</button>
+                                <button class="time-adjust-btn" data-target="edit-duration" data-direction="-1">-</button>
+                            </div>
+                        </div>
+                    </div>
+                    <textarea id="edit-text" placeholder="Selecione uma legenda para editar..."></textarea>
+                </div>
+                <div class="editor-actions">
+                    <label for="edit-repeat">Repetir Trecho</label>
+                    <div class=""><input type="text" id="repeatSegmentInput"></div>
+                    <div class="time-adjust-stack">
+                        <button class="repeat-adjust-btn" data-target="repeatSegmentInput" data-direction="1">+</button>
+						<button class="repeat-adjust-btn" data-target="repeatSegmentInput" data-direction="-1">-</button>
+
+                    </div>
+                    <button id="playSegmentButton">▶ Tocar Trecho</button>
+                </div>
+                <div class="">
+                    <button id="undoBtn" disabled>Desfazer</button>
+                    <button id="redoBtn" disabled>Refazer</button>
+                </div>
+            </div>
+            <div class="right-panel">
+                <h2>Legendas</h2>
+                <div id="subtitle-list"></div>
+            </div>
+
+        </div>
+    </div>
+    
+    <div id="batchEditModal" class="modal">
+        <div class="modal-content">
+            <span class="close-btn" id="closeModalBtn" style="float: right; font-size: 1.5rem; cursor: pointer;">&times;</span>
+            <h3>Edição em Lote</h3>
+            <div class="modal-form-group">
+                <label for="time-shift">Deslocamento de tempo (em segundos):</label>
+                <input type="number" id="time-shift" step="0.001" placeholder="Ex: +1.5 ou -0.5">
+            </div>
+            <div class="modal-form-group">
+                <label for="apply-scope">Aplicar a:</label>
+                <select id="apply-scope" style="width: 100%; padding: 0.75rem; box-sizing: border-box;">
+                    <option value="all">Todas as legendas</option>
+                    <option value="from_selected">A partir da legenda selecionada</option>
+                </select>
+            </div>
+            <button id="apply-shift-btn" style="background-color: var(--primary-color); padding: 0.75rem 1.5rem; border: none; color: white; border-radius: 4px; font-size: 1rem;">Aplicar</button>
+        </div>
+    </div>
+
+ 
+    <script>
+// state.js
+class State {
+  constructor() {
+    this.videoUrl = '';
+    this.srtUrl = '';
+    this.stepIncrement = 0.1;
+    this.subtitles = [];
+    this.currentSubtitleIndex = null;
+    this.history = [];
+    this.currentHistoryIndex = -1;
+  }
+
+  updateHistory() {
+    this.history = this.history.slice(0, this.currentHistoryIndex + 1);
+    this.history.push(JSON.parse(JSON.stringify(this.subtitles)));
+    this.currentHistoryIndex++;
+  }
+
+  undo() {
+    if (this.currentHistoryIndex > 0) {
+      this.currentHistoryIndex--;
+      this.subtitles = JSON.parse(JSON.stringify(this.history[this.currentHistoryIndex]));
+    }
+  }
+
+  redo() {
+    if (this.currentHistoryIndex < this.history.length - 1) {
+      this.currentHistoryIndex++;
+      this.subtitles = JSON.parse(JSON.stringify(this.history[this.currentHistoryIndex]));
+    }
+  }
+}
+
+// input-manager.js
+class InputManager {
+  constructor(state) {
+    this.state = state;
+    this.inputs = {
+      videoUrl: document.getElementById('videoUrl'),
+      srtUrl: document.getElementById('srtUrl'),
+      stepIncrement: document.getElementById('step-increment'),
+      editStart: document.getElementById('edit-start'),
+      editEnd: document.getElementById('edit-end'),
+      editDuration: document.getElementById('edit-duration'),
+      editText: document.getElementById('edit-text'),
+      repeatSegmentInput: document.getElementById('repeatSegmentInput'),
+      timeShift: document.getElementById('time-shift'),
+    };
+
+    this.bindEvents();
+  }
+
+  bindEvents() {
+    Object.keys(this.inputs).forEach((key) => {
+      const input = this.inputs[key];
+      if (input) {
+        input.addEventListener('input', () => {
+          this.updateState(key, input.value);
+        });
+      }
+    });
+
+    document.getElementById('undoBtn').addEventListener('click', () => {
+      this.state.undo();
+      this.updateInputs();
+    });
+
+    document.getElementById('redoBtn').addEventListener('click', () => {
+      this.state.redo();
+      this.updateInputs();
+    });
+  }
+
+  updateState(key, value) {
+    switch (key) {
+      case 'videoUrl':
+        this.state.videoUrl = value;
+        break;
+      case 'srtUrl':
+        this.state.srtUrl = value;
+        break;
+      case 'stepIncrement':
+        this.state.stepIncrement = parseFloat(value);
+        break;
+      case 'editStart':
+      case 'editEnd':
+      case 'editDuration':
+      case 'editText':
+        if (this.state.currentSubtitleIndex !== null) {
+          this.state.subtitles[this.state.currentSubtitleIndex][key] = value;
+          this.state.updateHistory();
+        }
+        break;
+      case 'repeatSegmentInput':
+        // lógica para repetir trecho
+        break;
+      case 'timeShift':
+        // lógica para deslocamento de tempo
+        break;
+      default:
+        break;
+    }
+  }
+
+  updateInputs() {
+    Object.keys(this.inputs).forEach((key) => {
+      const input = this.inputs[key];
+      if (input) {
+        switch (key) {
+          case 'editStart':
+          case 'editEnd':
+          case 'editDuration':
+          case 'editText':
+            if (this.state.currentSubtitleIndex !== null) {
+              input.value = this.state.subtitles[this.state.currentSubtitleIndex][key];
+            } else {
+              input.value = '';
+            }
+            break;
+          default:
+            input.value = this.state[key];
+            break;
+        }
+      }
+    });
+  }
+}
+
+// init.js
+function init() {
+  const state = new State();
+  const inputManager = new InputManager(state);
+
+  // lógica para carregar mídia, edição em lote, etc.
+}
+
+document.addEventListener('DOMContentLoaded', init);
+
+    </script>
+</body>
+</html>
