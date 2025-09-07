@@ -1,1 +1,565 @@
 // Subititles Pro
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Editor de Legendas Profissional</title>
+    <style>
+        :root {
+            --background-color: #1a1a1a;
+            --container-bg: #242424;
+            --text-color: #e0e0e0;
+            --input-bg: #333333;
+            --border-color: #444444;
+            --primary-color: #007BFF; /* Azul */
+            --secondary-color: #6c757d; /* Cinza */
+            --active-color: var(--primary-color);
+            --active-bg: #2a3a4a;
+            --danger-color: #f44336; /* Vermelho */
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background-color: var(--background-color);
+            color: var(--text-color);
+            margin: 0;
+            padding: 1.5rem;
+            display: flex;
+            flex-direction: column;
+            gap: 1.5rem;
+        }
+        
+        .subtitle-item.selected {
+            background-color: var(--active-bg);
+            border-left: 3px solid var(--primary-color);
+            padding-left: 10px; /* Ajuste opcional para o texto não colar na borda */
+        }
+
+
+    </style>
+</head>
+<body>
+
+    <div class="main-container">
+        <h1>Editor de Legendas Profissional</h1>
+
+        <div class="top-bar">
+            <div class="input-group">
+                <input type="text" id="videoUrl" placeholder="Cole a URL do vídeo ou faça o upload">
+                <label for="videoUpload" class="upload-btn">Upload Vídeo</label>
+                <input type="file" id="videoUpload" accept="video/*">
+            </div>
+            <div class="input-group">
+                <input type="text" id="srtUrl" placeholder="Cole a URL da legenda (.srt) ou faça o upload">
+                <label for="srtUpload" class="upload-btn">Upload .SRT</label>
+                <input type="file" id="srtUpload" accept=".srt">
+            </div>
+            <div class="controls-group">
+                <div class="input-group" style="flex-grow: 1;">
+                    <label for="step-increment">Incremento (s):</label>
+                    <input type="number" id="step-increment" value="0.1" step="0.05" style="max-width: 120px;">
+                </div>
+                <div class="action-buttons">
+                    <button id="loadButton">Carregar Mídia</button>
+                    <button id="batchEditButton">Edição em Lote</button>
+                    <button id="exportButton">Exportar .SRT</button>
+                </div>
+            </div>
+            <p id="error-message"></p>
+        </div>
+
+        <div class="editor-layout">
+            <div class="left-panel">
+                <div class="video-container"><video id="video-player" controls></video></div>
+                <div class="editor-panel">
+                    <div class="time-control-group">
+                        <label for="edit-start">Início</label>
+                        <div class="time-input-wrapper">
+                            <input type="text" id="edit-start">
+                            <div class="time-adjust-stack">
+                                <button class="time-adjust-btn" data-target="edit-start" data-direction="1">+</button>
+                                <button class="time-adjust-btn" data-target="edit-start" data-direction="-1">-</button>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="time-control-group">
+                        <label for="edit-end">Fim</label>
+                        <div class="time-input-wrapper"><input type="text" id="edit-end"></div>
+                    </div>
+                    <div class="time-control-group">
+                        <label for="edit-duration">Duração (s)</label>
+                        <div class="time-input-wrapper">
+                             <input type="text" id="edit-duration">
+                             <div class="time-adjust-stack">
+                                <button class="time-adjust-btn" data-target="edit-duration" data-direction="1">+</button>
+                                <button class="time-adjust-btn" data-target="edit-duration" data-direction="-1">-</button>
+                            </div>
+                        </div>
+                    </div>
+                    <textarea id="edit-text" placeholder="Selecione uma legenda para editar..."></textarea>
+                </div>
+            </div>
+            <div class="right-panel">
+                <h2>Legendas</h2>
+                <div id="subtitle-list"></div>
+            </div>
+        </div>
+    </div>
+    
+    <div id="batchEditModal" class="modal">
+        <div class="modal-content">
+            <span class="close-btn" id="closeModalBtn" style="float: right; font-size: 1.5rem; cursor: pointer;">&times;</span>
+            <h3>Edição em Lote</h3>
+            <div class="modal-form-group">
+                <label for="time-shift">Deslocamento de tempo (em segundos):</label>
+                <input type="number" id="time-shift" step="0.001" placeholder="Ex: +1.5 ou -0.5">
+            </div>
+            <div class="modal-form-group">
+                <label for="apply-scope">Aplicar a:</label>
+                <select id="apply-scope" style="width: 100%; padding: 0.75rem; box-sizing: border-box;">
+                    <option value="all">Todas as legendas</option>
+                    <option value="from_selected">A partir da legenda selecionada</option>
+                </select>
+            </div>
+            <button id="apply-shift-btn" style="background-color: var(--primary-color); padding: 0.75rem 1.5rem; border: none; color: white; border-radius: 4px; font-size: 1rem;">Aplicar</button>
+        </div>
+    </div>
+
+    <script>
+/**
+ * Armazena o estado do aplicativo, como a lista de legendas.
+ * Usar um objeto para o estado ajuda a manter o código organizado.
+ */
+const appState = {
+    subtitles: [],
+};
+
+/**
+ * Função principal de inicialização.
+ * Configura todos os ouvintes de eventos quando o DOM estiver pronto.
+ */
+function init() {
+    // Seleciona os elementos do DOM uma vez para melhorar o desempenho.
+    const videoUploadInput = document.getElementById('videoUpload');
+    const srtUploadInput = document.getElementById('srtUpload');
+
+    // Adiciona os "escutadores" para os eventos de mudança nos inputs de arquivo.
+    if (videoUploadInput) {
+        videoUploadInput.addEventListener('change', (event) => handleFileUpload(event, 'video'));
+    }
+    if (srtUploadInput) {
+        srtUploadInput.addEventListener('change', (event) => handleFileUpload(event, 'srt'));
+    }
+
+    // --- INICIALIZADORES DOS MÓDULOS ---
+    initEditorControls();
+    initSubtitleList(); // ADICIONE ESTA LINHA
+}
+
+//===================
+// Fx de carregamento
+//===================
+/**
+ * Manipulador de upload de arquivos genérico.
+ * Verifica se um arquivo foi selecionado e o processa com base no tipo.
+ * @param {Event} event - O evento de 'change' do input.
+ * @param {string} type - O tipo de arquivo ('video' ou 'srt').
+ */
+function handleFileUpload(event, type) {
+    const file = event.target.files[0];
+    const errorMessageElement = document.getElementById('error-message');
+    errorMessageElement.textContent = ''; // Limpa mensagens de erro antigas
+
+    if (!file) {
+        // Isso geralmente não acontece, mas é uma boa prática verificar.
+        return;
+    }
+
+    if (type === 'video') {
+        loadVideoPlayer(file);
+    } else if (type === 'srt') {
+        loadSrtFile(file);
+    }
+}
+
+/**
+ * Carrega e exibe o arquivo de vídeo no player.
+ * @param {File} videoFile - O arquivo de vídeo do input.
+ */
+function loadVideoPlayer(videoFile) {
+    const videoPlayer = document.getElementById('video-player');
+    const errorMessageElement = document.getElementById('error-message');
+
+    if (!videoFile.type.startsWith('video/')) {
+        errorMessageElement.textContent = 'Erro: O arquivo selecionado não é um vídeo válido.';
+        return;
+    }
+
+    // Cria uma URL temporária para o arquivo local e a define como a fonte do player.
+    const videoURL = URL.createObjectURL(videoFile);
+    videoPlayer.src = videoURL;
+}
+
+/**
+ * Lê e processa o arquivo .srt.
+ * @param {File} srtFile - O arquivo de legenda .srt do input.
+ */
+function loadSrtFile(srtFile) {
+    const reader = new FileReader();
+    const errorMessageElement = document.getElementById('error-message');
+
+    // Define o que fazer quando a leitura do arquivo for concluída com sucesso.
+    reader.onload = (event) => {
+        try {
+            const srtContent = event.target.result;
+            appState.subtitles = parseSrt(srtContent); // Analisa o conteúdo
+            displaySubtitles(appState.subtitles); // Exibe na tela
+        } catch (error) {
+            errorMessageElement.textContent = 'Erro ao processar o arquivo .srt. Verifique o formato.';
+            console.error("SRT Parsing Error:", error);
+        }
+    };
+
+    // Define o que fazer em caso de erro na leitura.
+    reader.onerror = () => {
+        errorMessageElement.textContent = 'Não foi possível ler o arquivo de legenda.';
+    };
+
+    // Inicia a leitura do arquivo como texto.
+    reader.readAsText(srtFile);
+}
+
+/**
+ * Analisa (parse) o conteúdo de um arquivo .srt e o converte para um array de objetos.
+ * @param {string} srtContent - O conteúdo de texto do arquivo .srt.
+ * @returns {Array<Object>} Um array de objetos, onde cada objeto representa uma legenda.
+ */
+function parseSrt(srtContent) {
+    // Normaliza as quebras de linha e divide o texto em blocos de legenda.
+    // Cada bloco é separado por duas quebras de linha.
+    const blocks = srtContent.trim().replace(/\r/g, '').split('\n\n');
+
+    const subtitles = blocks.map(block => {
+        const lines = block.split('\n');
+        if (lines.length < 3) return null; // Bloco inválido
+
+        const id = parseInt(lines[0], 10);
+        const timeMatch = lines[1].match(/(\d{2}:\d{2}:\d{2},\d{3})\s*-->\s*(\d{2}:\d{2}:\d{2},\d{3})/);
+        
+        if (!id || !timeMatch) return null; // Formato de ID ou tempo inválido
+
+        const startTime = timeMatch[1];
+        const endTime = timeMatch[2];
+        const text = lines.slice(2).join('\n'); // Une as linhas de texto, caso haja mais de uma.
+
+        return { id, startTime, endTime, text };
+    }).filter(Boolean); // Filtra quaisquer blocos nulos/inválidos
+
+    return subtitles;
+}
+
+/**
+ * Exibe as legendas na lista da interface.
+ * @param {Array<Object>} subtitles - O array de legendas parseado.
+ */
+function displaySubtitles(subtitles) {
+    const listContainer = document.getElementById('subtitle-list');
+    listContainer.innerHTML = ''; // Limpa a lista antes de adicionar os novos itens
+
+    if (subtitles.length === 0) {
+        listContainer.innerHTML = '<p>Nenhuma legenda encontrada no arquivo.</p>';
+        return;
+    }
+    
+    const fragment = document.createDocumentFragment();
+
+    subtitles.forEach(sub => {
+        const subItem = document.createElement('div');
+        // Adiciona classes e atributos que podem ser úteis para CSS e interações futuras
+        subItem.className = 'subtitle-item'; 
+        subItem.dataset.id = sub.id;
+        subItem.dataset.startTime = sub.startTime;
+
+        // Estrutura interna do item da legenda
+        subItem.innerHTML = `
+            <div class="subtitle-time">${sub.startTime} --> ${sub.endTime}</div>
+            <div class="subtitle-text">${sub.text.replace(/\n/g, '<br>')}</div>
+        `;
+        fragment.appendChild(subItem);
+    });
+
+    listContainer.appendChild(fragment);
+}
+
+//===================
+// Fx btns +/-
+//===================
+/**
+ * Inicializa os controles do painel de edição de tempo.
+ * Define o campo 'Fim' como somente leitura e adiciona os eventos aos botões e inputs.
+ */
+function initEditorControls() {
+    // --- CORREÇÃO: Declarar todas as variáveis de input aqui no início ---
+    const startInput = document.getElementById('edit-start');
+    const durationInput = document.getElementById('edit-duration');
+    const endInput = document.getElementById('edit-end');
+
+    if (endInput) {
+        endInput.readOnly = true; // Bloqueia o campo 'Fim' para edição
+    }
+
+    // Seleciona todos os botões de ajuste de tempo de uma vez
+    const adjustButtons = document.querySelectorAll('.time-adjust-btn');
+    adjustButtons.forEach(button => {
+        button.addEventListener('click', handleTimeAdjust);
+    });
+
+    // Eventos para digitação manual nos campos
+    const handleManualInput = () => {
+        updateFinalTime();
+        updateActiveSubtitleData();
+    };
+
+    if (startInput) {
+        startInput.addEventListener('input', handleManualInput);
+    }
+    if (durationInput) {
+        durationInput.addEventListener('input', handleManualInput);
+    }
+}
+
+
+/**
+ * Manipulador de clique para os botões de ajuste de tempo (+/-).
+ * Lê os atributos do botão para determinar qual campo e direção ajustar.
+ * @param {Event} event - O objeto do evento de clique.
+ */
+function handleTimeAdjust(event) {
+    event.preventDefault(); // Impede qualquer comportamento padrão do botão
+    const button = event.currentTarget;
+    const targetInputId = button.dataset.target; // Ex: 'edit-start' ou 'edit-duration'
+    const direction = parseInt(button.dataset.direction, 10); // Ex: 1 para '+' ou -1 para '-'
+    
+    const stepInput = document.getElementById('step-increment');
+    const increment = parseFloat(stepInput.value) || 0.1;
+
+    const targetInput = document.getElementById(targetInputId);
+    if (!targetInput) return;
+
+    // Converte o tempo do input para segundos
+    let currentValueInSeconds = timeStringToSeconds(targetInput.value);
+    
+    // Calcula o novo valor
+    let newValueInSeconds = currentValueInSeconds + (increment * direction);
+
+    // Garante que o tempo não seja negativo
+    if (newValueInSeconds < 0) {
+        newValueInSeconds = 0;
+    }
+    
+    // Atualiza o valor do input que foi alterado
+    targetInput.value = secondsToTimeString(newValueInSeconds);
+    
+    // Dispara a função principal que recalcula tudo, especialmente o campo 'Fim'
+    updateFinalTime();    
+    
+    // Agora, salve as alterações na legenda ativa.
+    updateActiveSubtitleData();
+}
+
+/**
+ * Lê os valores de 'Início' e 'Duração', calcula e atualiza o campo 'Fim'.
+ * Esta é a função central que garante a consistência dos tempos.
+ */
+function updateFinalTime() {
+    const startInput = document.getElementById('edit-start');
+    const durationInput = document.getElementById('edit-duration');
+    const endInput = document.getElementById('edit-end');
+
+    const startSeconds = timeStringToSeconds(startInput.value);
+    const durationSeconds = timeStringToSeconds(durationInput.value);
+
+    const endSeconds = startSeconds + durationSeconds;
+
+    endInput.value = secondsToTimeString(endSeconds);
+}
+
+/**
+ * Atualiza os dados da legenda ativa (a que está selecionada).
+ * Pega os valores do painel de edição e os salva no estado (appState)
+ * e também atualiza a visualização na lista de legendas.
+ */
+function updateActiveSubtitleData() {
+    // 1. Encontrar o item selecionado e seu ID
+    const selectedItem = document.querySelector('#subtitle-list .subtitle-item.selected');
+    if (!selectedItem) {
+        return; // Nenhuma legenda selecionada, não faz nada
+    }
+    const subtitleId = parseInt(selectedItem.dataset.id, 10);
+
+    // 2. Encontrar o objeto da legenda no nosso array de dados
+    const subtitleObject = appState.subtitles.find(sub => sub.id === subtitleId);
+    if (!subtitleObject) {
+        return;
+    }
+
+    // 3. Pegar os valores atuais do painel de edição
+    const newStartTime = document.getElementById('edit-start').value;
+    const newEndTime = document.getElementById('edit-end').value;
+    const newText = document.getElementById('edit-text').value;
+
+    // 4. Atualizar o objeto da legenda no array 'appState' (SALVAR OS DADOS)
+    subtitleObject.startTime = newStartTime;
+    subtitleObject.endTime = newEndTime;
+    subtitleObject.text = newText;
+
+    // 5. Atualizar o HTML na lista de legendas para refletir a mudança (ATUALIZAR A VISUALIZAÇÃO)
+    const timeDisplay = selectedItem.querySelector('.subtitle-time');
+    const textDisplay = selectedItem.querySelector('.subtitle-text');
+
+    if (timeDisplay) {
+        timeDisplay.textContent = `${newStartTime} --> ${newEndTime}`;
+    }
+    if (textDisplay) {
+        // Usamos innerHTML aqui para que as quebras de linha (<br>) funcionem
+        textDisplay.innerHTML = newText.replace(/\n/g, '<br>');
+    }
+}
+
+// --- FUNÇÕES AUXILIARES DE CONVERSÃO DE TEMPO ---
+
+/**
+ * Converte uma string de tempo no formato HH:MM:SS,mmm para segundos.
+ * @param {string} timeString - A string de tempo a ser convertida.
+ * @returns {number} O número total de segundos.
+ */
+function timeStringToSeconds(timeString) {
+    if (!timeString || typeof timeString !== 'string') return 0;
+    
+    const parts = timeString.replace(',', '.').split(':');
+    if (parts.length !== 3) return 0;
+
+    try {
+        const hours = parseFloat(parts[0]);
+        const minutes = parseFloat(parts[1]);
+        const seconds = parseFloat(parts[2]);
+
+        return (hours * 3600) + (minutes * 60) + seconds;
+    } catch (e) {
+        return 0;
+    }
+}
+
+/**
+ * Converte um número total de segundos para o formato de string HH:MM:SS,mmm.
+ * @param {number} totalSeconds - O total de segundos a ser convertido.
+ * @returns {string} A string de tempo formatada.
+ */
+function secondsToTimeString(totalSeconds) {
+    if (isNaN(totalSeconds) || totalSeconds < 0) {
+        return '00:00:00,000';
+    }
+
+    const hours = Math.floor(totalSeconds / 3600);
+    const minutes = Math.floor((totalSeconds % 3600) / 60);
+    const seconds = Math.floor(totalSeconds % 60);
+    const milliseconds = Math.round((totalSeconds - Math.floor(totalSeconds)) * 1000);
+
+    const paddedHours = String(hours).padStart(2, '0');
+    const paddedMinutes = String(minutes).padStart(2, '0');
+    const paddedSeconds = String(seconds).padStart(2, '0');
+    const paddedMilliseconds = String(milliseconds).padStart(3, '0');
+
+    return `${paddedHours}:${paddedMinutes}:${paddedSeconds},${paddedMilliseconds}`;
+}
+
+//====================================
+// Bloco fx de clique no trecho da srt
+//====================================
+/**
+ * Inicializa os eventos da lista de legendas.
+ * Usa delegação de eventos para lidar eficientemente com cliques nos itens.
+ */
+function initSubtitleList() {
+    const listContainer = document.getElementById('subtitle-list');
+    if (listContainer) {
+        listContainer.addEventListener('click', handleSubtitleClick);
+    }
+}
+
+/**
+ * Manipula o clique em um item na lista de legendas.
+ * Encontra a legenda clicada, atualiza a interface de edição e o destaque visual.
+ * @param {Event} event - O objeto do evento de clique.
+ */
+function handleSubtitleClick(event) {
+    // Encontra o elemento .subtitle-item mais próximo que foi clicado.
+    // Isso funciona mesmo se o clique for em um elemento filho (como o texto ou o tempo).
+    const clickedItem = event.target.closest('.subtitle-item');
+
+    if (!clickedItem) {
+        return; // Sai da função se o clique não foi em um item de legenda
+    }
+
+    // Pega o ID da legenda a partir do atributo data-id
+    const subtitleId = parseInt(clickedItem.dataset.id, 10);
+    
+    // Encontra o objeto completo da legenda no nosso estado da aplicação
+    const selectedSubtitle = appState.subtitles.find(sub => sub.id === subtitleId);
+
+    if (selectedSubtitle) {
+        populateEditor(selectedSubtitle); // Preenche os campos do editor
+        updateSelectionVisuals(clickedItem); // Atualiza o destaque visual
+    }
+}
+
+/**
+ * Preenche os campos do painel de edição com os dados de uma legenda.
+ * @param {object} subtitle - O objeto da legenda contendo id, startTime, endTime e text.
+ */
+function populateEditor(subtitle) {
+    const startInput = document.getElementById('edit-start');
+    const endInput = document.getElementById('edit-end');
+    const durationInput = document.getElementById('edit-duration');
+    const textInput = document.getElementById('edit-text');
+
+    // Preenche os valores de tempo e texto diretamente
+    startInput.value = subtitle.startTime;
+    endInput.value = subtitle.endTime;
+    textInput.value = subtitle.text;
+
+    // Calcula a duração
+    const startSeconds = timeStringToSeconds(subtitle.startTime);
+    const endSeconds = timeStringToSeconds(subtitle.endTime);
+    const durationSeconds = endSeconds - startSeconds;
+
+    // Define o valor da duração, garantindo que não seja negativo
+    durationInput.value = secondsToTimeString(durationSeconds < 0 ? 0 : durationSeconds);
+}
+
+/**
+ * Atualiza o estado visual (destaque) do item selecionado na lista.
+ * @param {HTMLElement} selectedElement - O elemento .subtitle-item que foi clicado.
+ */
+function updateSelectionVisuals(selectedElement) {
+    // Procura por qualquer item que já esteja selecionado
+    const previouslySelected = document.querySelector('#subtitle-list .subtitle-item.selected');
+    
+    // Se houver, remove a classe 'selected' dele
+    if (previouslySelected) {
+        previouslySelected.classList.remove('selected');
+    }
+
+    // Adiciona a classe 'selected' ao novo item clicado
+    selectedElement.classList.add('selected');
+}
+
+
+// --- PONTO DE ENTRADA DA APLICAÇÃO ---
+// Garante que o script só execute após o carregamento completo do HTML.
+document.addEventListener('DOMContentLoaded', init);
+
+    </script>
+</body>
+</html>
