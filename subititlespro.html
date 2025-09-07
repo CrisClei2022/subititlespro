@@ -154,7 +154,14 @@ function init() {
 
     // --- INICIALIZADORES DOS MÓDULOS ---
     initEditorControls();
-    initSubtitleList(); // ADICIONE ESTA LINHA
+    initSubtitleList();
+
+    // --- Evento no botão carregar mídia existente ---
+    const loadButton = document.getElementById('loadButton');
+    if (loadButton) {
+        loadButton.addEventListener('click', handleLoadMedia);
+    }
+
 }
 
 //===================
@@ -236,26 +243,21 @@ function loadSrtFile(srtFile) {
  * @returns {Array<Object>} Um array de objetos, onde cada objeto representa uma legenda.
  */
 function parseSrt(srtContent) {
-    // Normaliza as quebras de linha e divide o texto em blocos de legenda.
-    // Cada bloco é separado por duas quebras de linha.
     const blocks = srtContent.trim().replace(/\r/g, '').split('\n\n');
-
-    const subtitles = blocks.map(block => {
+    const subtitles = blocks.map((block, index) => {
         const lines = block.split('\n');
-        if (lines.length < 3) return null; // Bloco inválido
-
-        const id = parseInt(lines[0], 10);
-        const timeMatch = lines[1].match(/(\d{2}:\d{2}:\d{2},\d{3})\s*-->\s*(\d{2}:\d{2}:\d{2},\d{3})/);
-        
-        if (!id || !timeMatch) return null; // Formato de ID ou tempo inválido
-
+        // Encontra a linha que contém o tempo (ex.: "00:00:08,500 --> 00:00:11,100")
+        const timeLineIndex = lines.findIndex(line => line.includes('-->'));
+        if (timeLineIndex === -1) return null; // bloco inválido se não achar tempo
+        const timeMatch = lines[timeLineIndex].match(/(\d{2}:\d{2}:\d{2},\d{3})\s*-->\s*(\d{2}:\d{2}:\d{2},\d{3})/);
+        if (!timeMatch) return null; // formato inválido do tempo
+        const id = index + 1; // gera ID sequencial de 1 em diante
         const startTime = timeMatch[1];
         const endTime = timeMatch[2];
-        const text = lines.slice(2).join('\n'); // Une as linhas de texto, caso haja mais de uma.
-
+        // O texto começa na linha após a linha do tempo e pode ter várias linhas
+        const text = lines.slice(timeLineIndex + 1).join('\n');
         return { id, startTime, endTime, text };
-    }).filter(Boolean); // Filtra quaisquer blocos nulos/inválidos
-
+    }).filter(Boolean); // elimina blocos inválidos
     return subtitles;
 }
 
@@ -290,6 +292,86 @@ function displaySubtitles(subtitles) {
     });
 
     listContainer.appendChild(fragment);
+}
+
+// Tanto para arquivos enviados quanto para URLs digitadas
+function handleLoadMedia() {
+    const videoUrl = document.getElementById('videoUrl').value.trim();
+    const srtUrl = document.getElementById('srtUrl').value.trim();
+    const videoInput = document.getElementById('videoUpload');
+    const srtInput = document.getElementById('srtUpload');
+
+    // Carregar vídeo: se o arquivo foi enviado pelo upload, carrega ele, se não, tenta URL
+    if (videoInput && videoInput.files.length > 0) {
+        loadVideoPlayer(videoInput.files[0]);
+    } else if (videoUrl) {
+        loadVideoFromUrl(videoUrl);
+    }
+    // Carregar legenda: se o arquivo foi enviado pelo upload, carrega ele, se não, tenta URL
+    if (srtInput && srtInput.files.length > 0) {
+        loadSrtFile(srtInput.files[0]);
+    } else if (srtUrl) {
+        loadSrtFromUrl(srtUrl);
+    }
+}
+
+//===============================
+// Bloco de fx para carregar apartir de url
+//===============================
+/**
+ * Verifica se uma string parece ser uma URL válida.
+ * @param {string} str 
+ * @returns {boolean}
+ */
+function isValidUrl(str) {
+    try {
+        new URL(str);
+        return true;
+    } catch {
+        return false;
+    }
+}
+
+/**
+ * Carrega vídeo a partir de uma URL remota e define no player.
+ * @param {string} url - URL do vídeo.
+ */
+function loadVideoFromUrl(url) {
+    const videoPlayer = document.getElementById('video-player');
+    const errorMessageElement = document.getElementById('error-message');
+    errorMessageElement.textContent = '';
+    if (!isValidUrl(url)) {
+        errorMessageElement.textContent = 'URL de vídeo inválida.';
+        return;
+    }
+    // Define a fonte do vídeo e recarrega
+    videoPlayer.src = url;
+    videoPlayer.load();
+}
+
+/**
+ * Carrega o conteúdo SRT de uma URL remota, parseia e exibe as legendas.
+ * @param {string} url - URL do arquivo .srt.
+ */
+async function loadSrtFromUrl(url) {
+    const errorMessageElement = document.getElementById('error-message');
+    errorMessageElement.textContent = '';
+    if (!isValidUrl(url)) {
+        errorMessageElement.textContent = 'URL de legenda inválida.';
+        return;
+    }
+    try {
+        const response = await fetch(url);
+        if (!response.ok) {
+            throw new Error('Erro ao baixar o arquivo SRT.');
+        }
+        const srtContent = await response.text();
+        appState.subtitles = parseSrt(srtContent);
+        displaySubtitles(appState.subtitles);
+    } catch (error) {
+        errorMessageElement.textContent = 'Falha ao carregar o arquivo .srt da URL.';
+        console.error(error);
+    }
 }
 
 //===================
