@@ -94,6 +94,10 @@
             <div class="left-panel">
                 <div class="video-container"><video id="video-player" controls></video></div>
                 <div class="editor-panel">
+                    <div class="subtitle-list-controls" style="margin-bottom: 1rem;">
+                        <button id="addSegmentBtn">+ Adicionar Segmento</button>
+                        <button id="removeSegmentBtn">- Remover Segmento</button>
+                    </div>
                     <div class="time-control-group">
                         <label for="edit-start">Início</label>
                         <div class="time-input-wrapper">
@@ -196,6 +200,7 @@ function init() {
     initSubtitleList();
     initTextEditListener();
     initRepeatSegmentControls();
+    initSegmentButtons();
 
     // --- Evento no botão carregar mídia existente ---
     const loadButton = document.getElementById('loadButton');
@@ -926,7 +931,75 @@ function stopVideo() {
     video.pause();
 }
 
+//=======================================
+// Função para adicionar um novo segmento
+//=======================================
+/**
+ * Função para adicionar um novo segmento.
+ */
+function addSegment() {
+    const maxId = appState.subtitles.reduce((max, cur) => cur.id > max ? cur.id : max, 0);
+    const newId = maxId + 1;
+    const newSegment = {
+        id: newId,
+        startTime: "00:00:00,000",
+        endTime: "00:00:01,000",
+        text: ""
+    };
+    appState.subtitles.push(newSegment);
+    saveStateForUndo(appState.subtitles);
+    displaySubtitles(appState.subtitles);
+    
+    // Seleciona e destaca o novo segmento para edição
+    const itemElement = document.querySelector(`#subtitle-list .subtitle-item[data-id="${newId}"]`);
+    if (itemElement) {
+        updateSelectionVisuals(itemElement);
+        populateEditor(newSegment);
+    }
+}
+
+// Função para remover o segmento selecionado
+function removeSegment() {
+    const selectedItem = document.querySelector('#subtitle-list .subtitle-item.selected');
+    if (!selectedItem) {
+        alert("Selecione um segmento para remover.");
+        return;
+    }
+    const idToRemove = parseInt(selectedItem.dataset.id, 10);
+    if (!confirm("Tem certeza que deseja remover este segmento?")) {
+        return;
+    }
+    appState.subtitles = appState.subtitles.filter(sub => sub.id !== idToRemove);
+    saveStateForUndo(appState.subtitles);
+    displaySubtitles(appState.subtitles);
+    clearEditorPanel();
+    
+    // Seleciona outro segmento para edição se houver
+    if (appState.subtitles.length > 0) {
+        const firstItem = document.querySelector(`#subtitle-list .subtitle-item[data-id="${appState.subtitles[0].id}"]`);
+        if (firstItem) {
+            updateSelectionVisuals(firstItem);
+            populateEditor(appState.subtitles[0]);
+        }
+    }
+}
+
+// Conectar os botões aos eventos no init
+function initSegmentButtons() {
+    const addBtn = document.getElementById('addSegmentBtn');
+    const removeBtn = document.getElementById('removeSegmentBtn');
+
+    if (addBtn) {
+        addBtn.addEventListener('click', addSegment);
+    }
+    if (removeBtn) {
+        removeBtn.addEventListener('click', removeSegment);
+    }
+}
+
+// ======================================
 // --- PONTO DE ENTRADA DA APLICAÇÃO ---
+// ======================================
 // Garante que o script só execute após o carregamento completo do HTML.
 document.addEventListener('DOMContentLoaded', init);
 
