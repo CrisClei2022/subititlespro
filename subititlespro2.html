@@ -168,167 +168,439 @@
         </div>
     </div>
 
- 
-    <script>
+<script>
 // state.js
 class State {
-  constructor() {
-    this.videoUrl = '';
-    this.srtUrl = '';
-    this.stepIncrement = 0.1;
-    this.subtitles = [];
-    this.currentSubtitleIndex = null;
-    this.history = [];
-    this.currentHistoryIndex = -1;
-  }
-
-  updateHistory() {
-    this.history = this.history.slice(0, this.currentHistoryIndex + 1);
-    this.history.push(JSON.parse(JSON.stringify(this.subtitles)));
-    this.currentHistoryIndex++;
-    this.updateButtonStates();
-  }
-
-  undo() {
-    if (this.currentHistoryIndex > 0) {
-      this.currentHistoryIndex--;
-      this.subtitles = JSON.parse(JSON.stringify(this.history[this.currentHistoryIndex]));
-      this.updateButtonStates();
-    }
-  }
-
-  redo() {
-    if (this.currentHistoryIndex < this.history.length - 1) {
-      this.currentHistoryIndex++;
-      this.subtitles = JSON.parse(JSON.stringify(this.history[this.currentHistoryIndex]));
-      this.updateButtonStates();
-    }
-  }
-
-  updateButtonStates() {
-    const undoBtn = document.getElementById('undoBtn');
-    const redoBtn = document.getElementById('redoBtn');
-
-    if (this.currentHistoryIndex > 0) {
-      undoBtn.disabled = false;
-    } else {
-      undoBtn.disabled = true;
+    constructor() {
+        this.videoUrl = '';
+        this.srtUrl = '';
+        this.stepIncrement = 0.1;
+        this.subtitles = [];
+        this.currentSubtitleIndex = null;
+        this.history = [];
+        this.currentHistoryIndex = -1;
+        document.getElementById('undoBtn').disabled = true;
+        document.getElementById('redoBtn').disabled = true;
     }
 
-    if (this.currentHistoryIndex < this.history.length - 1) {
-      redoBtn.disabled = false;
-    } else {
-      redoBtn.disabled = true;
+    /**
+     * Salva o estado atual das legendas no histórico.
+     * @param {number|null} [activeId=null] O ID da legenda que está ativa.
+     */
+    updateHistory(activeId = null) {
+        this.history = this.history.slice(0, this.currentHistoryIndex + 1);
+        this.history.push({ state: JSON.parse(JSON.stringify(this.subtitles)), activeId });
+        this.currentHistoryIndex++;
+        this.updateButtonStates();
     }
-  }
+    
+    /**
+     * Reverte o estado para a entrada anterior no histórico.
+     */
+    undo() {
+        if (this.currentHistoryIndex > 0) {
+            this.currentHistoryIndex--;
+            const prevState = this.history[this.currentHistoryIndex];
+            this.subtitles = JSON.parse(JSON.stringify(prevState.state));
+            this.currentSubtitleIndex = this.subtitles.findIndex(sub => sub.id === prevState.activeId);
+            this.updateButtonStates();
+        }
+    }
+
+    /**
+     * Avança o estado para a próxima entrada no histórico.
+     */
+    redo() {
+        if (this.currentHistoryIndex < this.history.length - 1) {
+            this.currentHistoryIndex++;
+            const nextState = this.history[this.currentHistoryIndex];
+            this.subtitles = JSON.parse(JSON.stringify(nextState.state));
+            this.currentSubtitleIndex = this.subtitles.findIndex(sub => sub.id === nextState.activeId);
+            this.updateButtonStates();
+        }
+    }
+
+    /**
+     * Atualiza o estado dos botões Desfazer/Refazer com base no histórico.
+     */
+    updateButtonStates() {
+        const undoBtn = document.getElementById('undoBtn');
+        const redoBtn = document.getElementById('redoBtn');
+
+        undoBtn.disabled = this.currentHistoryIndex <= 0;
+        redoBtn.disabled = this.currentHistoryIndex >= this.history.length - 1;
+    }
 }
 
 // input-manager.js
 class InputManager {
-  constructor(state) {
-    this.state = state;
-    this.inputs = {
-      videoUrl: document.getElementById('videoUrl'),
-      srtUrl: document.getElementById('srtUrl'),
-      stepIncrement: document.getElementById('step-increment'),
-      editStart: document.getElementById('edit-start'),
-      editEnd: document.getElementById('edit-end'),
-      editDuration: document.getElementById('edit-duration'),
-      editText: document.getElementById('edit-text'),
-      repeatSegmentInput: document.getElementById('repeatSegmentInput'),
-      timeShift: document.getElementById('time-shift'),
-    };
-
-    this.bindEvents();
-  }
-
-  bindEvents() {
-    Object.keys(this.inputs).forEach((key) => {
-      const input = this.inputs[key];
-      if (input) {
-        input.addEventListener('input', () => {
-          this.updateState(key, input.value);
-        });
-      }
-    });
-
-    document.getElementById('undoBtn').addEventListener('click', () => {
-      this.state.undo();
-      this.updateInputs();
-    });
-
-    document.getElementById('redoBtn').addEventListener('click', () => {
-      this.state.redo();
-      this.updateInputs();
-    });
-  }
-
-  updateState(key, value) {
-    switch (key) {
-      case 'videoUrl':
-        this.state.videoUrl = value;
-        break;
-      case 'srtUrl':
-        this.state.srtUrl = value;
-        break;
-      case 'stepIncrement':
-        this.state.stepIncrement = parseFloat(value);
-        break;
-      case 'editStart':
-      case 'editEnd':
-      case 'editDuration':
-      case 'editText':
-        if (this.state.currentSubtitleIndex !== null) {
-          this.state.subtitles[this.state.currentSubtitleIndex][key] = value;
-          this.state.updateHistory();
-        }
-        break;
-      case 'repeatSegmentInput':
-        // lógica para repetir trecho
-        break;
-      case 'timeShift':
-        // lógica para deslocamento de tempo
-        break;
-      default:
-        break;
+    constructor(state) {
+        this.state = state;
+        this.bindEvents();
     }
-  }
 
-  updateInputs() {
-    Object.keys(this.inputs).forEach((key) => {
-      const input = this.inputs[key];
-      if (input) {
-        switch (key) {
-          case 'editStart':
-          case 'editEnd':
-          case 'editDuration':
-          case 'editText':
-            if (this.state.currentSubtitleIndex !== null) {
-              input.value = this.state.subtitles[this.state.currentSubtitleIndex][key];
-            } else {
-              input.value = '';
+    /**
+     * Associa os eventos de clique e input a suas respectivas ações.
+     */
+    bindEvents() {
+        // Eventos para os botões de Desfazer/Refazer
+        document.getElementById('undoBtn').addEventListener('click', () => {
+            this.state.undo();
+            refreshUIFromState(this.state);
+        });
+
+        document.getElementById('redoBtn').addEventListener('click', () => {
+            this.state.redo();
+            refreshUIFromState(this.state);
+        });
+
+        // Eventos para os inputs de edição de legenda
+        const inputsToMonitor = ['edit-start', 'edit-end', 'edit-duration', 'edit-text'];
+        inputsToMonitor.forEach(id => {
+            const input = document.getElementById(id);
+            if (input) {
+                input.addEventListener('input', () => {
+                    const selectedItem = document.querySelector('#subtitle-list .subtitle-item.selected');
+                    if (!selectedItem) return;
+                    const subtitleId = parseInt(selectedItem.dataset.id, 10);
+                    const subtitleIndex = this.state.subtitles.findIndex(sub => sub.id === subtitleId);
+                    if (subtitleIndex === -1) return;
+
+                    // A função `updateActiveSubtitleData` irá manipular o estado e salvar o histórico.
+                    updateActiveSubtitleData(this.state);
+                });
             }
-            break;
-          default:
-            input.value = this.state[key];
-            break;
-        }
-      }
-    });
-  }
+        });
+    }
 }
 
 // init.js
 function init() {
-  const state = new State();
-  state.updateButtonStates(); // Adicione essa linha
-  const inputManager = new InputManager(state);
+    const state = new State();
+    const inputManager = new InputManager(state);
 
-  // lógica para carregar mídia, edição em lote, etc.
+    // Conectar eventos do DOM aos manipuladores
+    const videoUploadInput = document.getElementById('videoUpload');
+    const srtUploadInput = document.getElementById('srtUpload');
+    if (videoUploadInput) {
+        videoUploadInput.addEventListener('change', (event) => handleFileUpload(event, 'video', state));
+    }
+    if (srtUploadInput) {
+        srtUploadInput.addEventListener('change', (event) => handleFileUpload(event, 'srt', state));
+    }
+    document.getElementById('loadButton').addEventListener('click', () => handleLoadMedia(state));
+    document.getElementById('addSegmentBtn').addEventListener('click', () => addSegment(state));
+    document.getElementById('removeSegmentBtn').addEventListener('click', () => removeSegment(state));
+
+    // Inicializar os controles de tempo, botões de segmento, etc.
+    initEditorControls(state);
+    initSubtitleList(state);
+    initTextEditListener(state);
+    initRepeatSegmentControls();
 }
 
-document.addEventListener('DOMContentLoaded', init);
+//=========================================================
+// OUTRAS FUNÇÕES (coloque aqui todas as outras funções que você enviou)
+//=========================================================
 
-    </script>
+// Fx de carregamento
+function handleFileUpload(event, type, state) {
+    const file = event.target.files[0];
+    const errorMessageElement = document.getElementById('error-message');
+    errorMessageElement.textContent = '';
+    if (!file) return;
+    if (type === 'video') {
+        loadVideoPlayer(file);
+    } else if (type === 'srt') {
+        loadSrtFile(file, state);
+    }
+}
+
+function loadVideoPlayer(videoFile) {
+    const videoPlayer = document.getElementById('video-player');
+    const errorMessageElement = document.getElementById('error-message');
+    if (!videoFile.type.startsWith('video/')) {
+        errorMessageElement.textContent = 'Erro: O arquivo selecionado não é um vídeo válido.';
+        return;
+    }
+    const videoURL = URL.createObjectURL(videoFile);
+    videoPlayer.src = videoURL;
+}
+
+function loadSrtFile(srtFile, state) {
+    const reader = new FileReader();
+    const errorMessageElement = document.getElementById('error-message');
+    reader.onload = (event) => {
+        try {
+            const srtContent = event.target.result;
+            state.subtitles = parseSrt(srtContent);
+            displaySubtitles(state.subtitles);
+            state.updateHistory(); // Salva o estado inicial
+        } catch (error) {
+            errorMessageElement.textContent = 'Erro ao processar o arquivo .srt. Verifique o formato.';
+            console.error("SRT Parsing Error:", error);
+        }
+    };
+    reader.onerror = () => {
+        errorMessageElement.textContent = 'Não foi possível ler o arquivo de legenda.';
+    };
+    reader.readAsText(srtFile);
+}
+
+function parseSrt(srtContent) {
+    const blocks = srtContent.trim().replace(/\r/g, '').split('\n\n');
+    const subtitles = blocks.map((block, index) => {
+        const lines = block.split('\n');
+        const timeLineIndex = lines.findIndex(line => line.includes('-->'));
+        if (timeLineIndex === -1) return null;
+        const timeMatch = lines[timeLineIndex].match(/(\d{2}:\d{2}:\d{2},\d{3})\s*-->\s*(\d{2}:\d{2}:\d{2},\d{3})/);
+        if (!timeMatch) return null;
+        const id = index + 1;
+        const startTime = timeMatch[1];
+        const endTime = timeMatch[2];
+        const text = lines.slice(timeLineIndex + 1).join('\n');
+        return { id, startTime, endTime, text };
+    }).filter(Boolean);
+    return subtitles;
+}
+
+function displaySubtitles(subtitles) {
+    const listContainer = document.getElementById('subtitle-list');
+    listContainer.innerHTML = '';
+    if (subtitles.length === 0) {
+        listContainer.innerHTML = '<p>Nenhuma legenda encontrada no arquivo.</p>';
+        return;
+    }
+    const fragment = document.createDocumentFragment();
+    subtitles.forEach(sub => {
+        const subItem = document.createElement('div');
+        subItem.className = 'subtitle-item';
+        subItem.dataset.id = sub.id;
+        subItem.innerHTML = `<div class="subtitle-content"><div class="subtitle-time">${sub.startTime} --> ${sub.endTime}</div><div class="subtitle-text">${sub.text.replace(/\n/g, '<br>')}</div></div>`;
+        fragment.appendChild(subItem);
+    });
+    listContainer.appendChild(fragment);
+}
+
+function handleLoadMedia(state) {
+    const videoUrl = document.getElementById('videoUrl').value.trim();
+    const srtUrl = document.getElementById('srtUrl').value.trim();
+    const videoInput = document.getElementById('videoUpload');
+    const srtInput = document.getElementById('srtUpload');
+    if (videoInput && videoInput.files.length > 0) {
+        loadVideoPlayer(videoInput.files[0]);
+    } else if (videoUrl) {
+        loadVideoFromUrl(videoUrl);
+    }
+    if (srtInput && srtInput.files.length > 0) {
+        loadSrtFile(srtInput.files[0], state);
+    } else if (srtUrl) {
+        loadSrtFromUrl(srtUrl, state);
+    }
+}
+
+function isValidUrl(str) {
+    try { new URL(str); return true; } catch { return false; }
+}
+
+async function loadSrtFromUrl(url, state) {
+    const errorMessageElement = document.getElementById('error-message');
+    errorMessageElement.textContent = '';
+    if (!isValidUrl(url)) {
+        errorMessageElement.textContent = 'URL de legenda inválida.';
+        return;
+    }
+    try {
+        const response = await fetch(url);
+        if (!response.ok) throw new Error('Erro ao baixar o arquivo SRT.');
+        const srtContent = await response.text();
+        state.subtitles = parseSrt(srtContent);
+        displaySubtitles(state.subtitles);
+        state.updateHistory(); // Salva o estado inicial
+    } catch (error) {
+        errorMessageElement.textContent = 'Falha ao carregar o arquivo .srt da URL.';
+        console.error(error);
+    }
+}
+
+// Bloco de fx editar texto
+function initTextEditListener(state) {
+    const textInput = document.getElementById('edit-text');
+    if (!textInput) return;
+    textInput.addEventListener('input', () => {
+        const selectedItem = document.querySelector('#subtitle-list .subtitle-item.selected');
+        if (!selectedItem) return;
+        const textDisplay = selectedItem.querySelector('.subtitle-text');
+        if (textDisplay) {
+            textDisplay.innerHTML = textInput.value.replace(/\n/g, '<br>');
+        }
+        updateActiveSubtitleData(state);
+    });
+}
+
+function updateActiveSubtitleData(state) {
+    const selectedItem = document.querySelector('#subtitle-list .subtitle-item.selected');
+    if (!selectedItem) return;
+    const subtitleId = parseInt(selectedItem.dataset.id, 10);
+    const subtitleObject = state.subtitles.find(sub => sub.id === subtitleId);
+    if (!subtitleObject) return;
+    const newStartTime = document.getElementById('edit-start').value;
+    const newEndTime = document.getElementById('edit-end').value;
+    const newText = document.getElementById('edit-text').value;
+    subtitleObject.startTime = newStartTime;
+    subtitleObject.endTime = newEndTime;
+    subtitleObject.text = newText;
+    state.updateHistory(subtitleId);
+}
+
+function refreshUIFromState(state) {
+    displaySubtitles(state.subtitles);
+    if (state.currentSubtitleIndex !== null) {
+        const subtitle = state.subtitles[state.currentSubtitleIndex];
+        if (subtitle) {
+            populateEditor(subtitle);
+            const selectedItem = document.querySelector(`[data-id="${subtitle.id}"]`);
+            if (selectedItem) {
+                updateSelectionVisuals(selectedItem);
+            }
+        }
+    } else {
+        clearEditorPanel();
+    }
+}
+
+// Bloco de fx editar/remover
+function addSegment(state) {
+    const maxId = state.subtitles.reduce((max, cur) => cur.id > max ? cur.id : max, 0);
+    const newId = maxId + 1;
+    const newSegment = { id: newId, startTime: "00:00:00,000", endTime: "00:00:01,000", text: "" };
+    state.subtitles.push(newSegment);
+    state.updateHistory(newId);
+    displaySubtitles(state.subtitles);
+    const itemElement = document.querySelector(`#subtitle-list .subtitle-item[data-id="${newId}"]`);
+    if (itemElement) {
+        updateSelectionVisuals(itemElement);
+        populateEditor(newSegment);
+        state.currentSubtitleIndex = state.subtitles.findIndex(sub => sub.id === newId);
+    }
+}
+
+function removeSegment(state) {
+    const selectedItem = document.querySelector('#subtitle-list .subtitle-item.selected');
+    if (!selectedItem) {
+        alert("Selecione um segmento para remover.");
+        return;
+    }
+    const idToRemove = parseInt(selectedItem.dataset.id, 10);
+    if (!confirm("Tem certeza que deseja remover este segmento?")) return;
+    state.subtitles = state.subtitles.filter(sub => sub.id !== idToRemove);
+    state.updateHistory(null);
+    displaySubtitles(state.subtitles);
+    clearEditorPanel();
+    if (state.subtitles.length > 0) {
+        const firstItem = document.querySelector(`#subtitle-list .subtitle-item[data-id="${state.subtitles[0].id}"]`);
+        if (firstItem) {
+            updateSelectionVisuals(firstItem);
+            populateEditor(state.subtitles[0]);
+            state.currentSubtitleIndex = 0;
+        }
+    } else {
+        state.currentSubtitleIndex = null;
+    }
+}
+
+
+// O resto das funções (initEditorControls, initSubtitleList, handleTimeAdjust, etc.)
+// também precisam ser ajustadas para aceitar o objeto `state`.
+// Aqui estão algumas das principais:
+
+function initSubtitleList(state) {
+    const listContainer = document.getElementById('subtitle-list');
+    if (listContainer) {
+        listContainer.addEventListener('click', (event) => handleSubtitleClick(event, state));
+    }
+}
+
+function handleSubtitleClick(event, state) {
+    updateActiveSubtitleData(state);
+    const clickedItem = event.target.closest('.subtitle-item');
+    if (!clickedItem) return;
+    const subtitleId = parseInt(clickedItem.dataset.id, 10);
+    const selectedSubtitle = state.subtitles.find(sub => sub.id === subtitleId);
+    if (selectedSubtitle) {
+        populateEditor(selectedSubtitle);
+        updateSelectionVisuals(clickedItem);
+        playVideoSegment(selectedSubtitle.startTime, selectedSubtitle.endTime);
+        state.currentSubtitleIndex = state.subtitles.findIndex(sub => sub.id === subtitleId);
+    }
+}
+
+function initEditorControls(state) {
+    const startInput = document.getElementById('edit-start');
+    const durationInput = document.getElementById('edit-duration');
+    const endInput = document.getElementById('edit-end');
+    if (endInput) {
+        endInput.readOnly = true;
+    }
+    const adjustButtons = document.querySelectorAll('.time-adjust-btn');
+    adjustButtons.forEach(button => {
+        button.addEventListener('click', (event) => handleTimeAdjust(event, state));
+    });
+    const handleManualInput = () => {
+        updateFinalTime();
+        updateActiveSubtitleData(state);
+    };
+    if (startInput) {
+        startInput.addEventListener('input', handleManualInput);
+    }
+    if (durationInput) {
+        durationInput.addEventListener('input', handleManualInput);
+    }
+    const playSegmentButton = document.getElementById('playSegmentButton');
+    if (playSegmentButton) {
+        playSegmentButton.addEventListener('click', () => {
+            const selectedItem = document.querySelector('#subtitle-list .subtitle-item.selected');
+            if (selectedItem) {
+                const start = document.getElementById('edit-start').value;
+                const end = document.getElementById('edit-end').value;
+                const repeat = getRepeatSegmentValue();
+                playRepeatedSegment(start, end, repeat);
+            } else {
+                alert('Selecione uma legenda primeiro.');
+            }
+        });
+    }
+}
+
+function handleTimeAdjust(event, state) {
+    event.preventDefault();
+    const button = event.currentTarget;
+    const targetInputId = button.dataset.target;
+    const direction = parseInt(button.dataset.direction, 10);
+    const stepInput = document.getElementById('step-increment');
+    const increment = parseFloat(stepInput.value) || 0.1;
+    const targetInput = document.getElementById(targetInputId);
+    if (!targetInput) return;
+    let currentValueInSeconds = timeStringToSeconds(targetInput.value);
+    let newValueInSeconds = currentValueInSeconds + (increment * direction);
+    if (newValueInSeconds < 0) {
+        newValueInSeconds = 0;
+    }
+    targetInput.value = secondsToTimeString(newValueInSeconds);
+    updateFinalTime();
+    updateActiveSubtitleData(state);
+}
+
+// O restante das suas funções (timeStringToSeconds, secondsToTimeString, etc.)
+// não precisam de grandes alterações, mas precisam estar no escopo global
+// para serem acessadas.
+/*
+script
+cria um cloco de funcoe usando boas praticas e separacao de responsabilidades
+o todos os valores dos inputs devem ser capturados
+ao clicar em undo ou reundo o estado deve ser retomado
+/*
+document.addEventListener('DOMContentLoaded', init);
+</script>
 </body>
 </html>
