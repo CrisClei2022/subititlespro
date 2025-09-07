@@ -121,11 +121,16 @@
                     </div>
                     <textarea id="edit-text" placeholder="Selecione uma legenda para editar..."></textarea>
                 </div>
+                <div class="">
+                    <button id="undoBtn" disabled>Desfazer</button>
+                    <button id="redoBtn" disabled>Refazer</button>
+                </div>
             </div>
             <div class="right-panel">
                 <h2>Legendas</h2>
                 <div id="subtitle-list"></div>
             </div>
+
         </div>
     </div>
     
@@ -177,6 +182,7 @@ function init() {
     // --- INICIALIZADORES DOS MÓDULOS ---
     initEditorControls();
     initSubtitleList();
+    initTextEditListener();
 
     // --- Evento no botão carregar mídia existente ---
     const loadButton = document.getElementById('loadButton');
@@ -578,6 +584,37 @@ function secondsToTimeString(totalSeconds) {
     const paddedMilliseconds = String(milliseconds).padStart(3, '0');
 
     return `${paddedHours}:${paddedMinutes}:${paddedSeconds},${paddedMilliseconds}`;
+}
+
+//===================
+// Bloco de fx editar texto
+//===================
+/**
+ * Inicializa o event listener para o input de texto da legenda editável
+ * para que as alterações atualizem o texto do item selecionado na lista.
+ */
+function initTextEditListener() {
+    const textInput = document.getElementById('edit-text');
+    if (!textInput) return;
+
+    textInput.addEventListener('input', () => {
+        const selectedItem = document.querySelector('#subtitle-list .subtitle-item.selected');
+        if (!selectedItem) return;
+
+        // Atualiza o texto do item na lista ao digitar no input
+        const textDisplay = selectedItem.querySelector('.subtitle-text');
+        if (textDisplay) {
+            // Substitui quebras de linha por <br> para preservar formatação
+            textDisplay.innerHTML = textInput.value.replace(/\n/g, '<br>');
+        }
+
+        // Atualiza o estado da legenda no appState (para salvar depois)
+        const subtitleId = parseInt(selectedItem.dataset.id, 10);
+        const subtitleObject = appState.subtitles.find(sub => sub.id === subtitleId);
+        if (subtitleObject) {
+            subtitleObject.text = textInput.value;
+        }
+    });
 }
 
 //====================================
