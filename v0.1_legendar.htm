@@ -1,0 +1,717 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Página com Parte Fixa e Parte Não Fixa</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: Arial, sans-serif;
+        }
+        
+		#edit-container{    display: flex;
+    flex-direction: column;
+    align-items: center;
+    position: relative;
+    bottom: 5%;
+    max-width: 480px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 95%;    
+    height: auto;
+          	z-index: 1001;
+		}
+
+		#edit-container table{
+    		width: 100%;
+        	align-text: center;
+            margin-left: auto;
+            margin-right: auto;
+			background-color: rgba(0, 0, 0, 0.75);
+		    color: white;
+		    font-weight: bold;
+		}
+
+		.edit-container-input{
+        	height: 20px;
+			width: 100px;
+		}
+	
+		.edit-container-button{
+        	height: 30px;
+			width: 65px;    
+    		background-color: #1d2023;
+    		color: white;
+		}
+	
+		#edit-container .textarea-edit-text {
+		    width: 90%; /* O input agora ocupa toda a largura disponível */
+		    height: 100%;
+            margin-bottom: 2%;
+		    word-wrap: break-word; /* Quebra de linha para conteúdo longo */
+		    overflow-wrap: break-word; /* Garante quebra automática de linha */
+		}
+		
+		#edit-container, table, input, button, textarea {
+		    border-radius: 5px;
+		}
+		
+		#edit-container button:hover {
+		    background-color: #000000;
+		    cursor: pointer;
+		}
+        	/* Menu de Botões */
+        .fixed-button {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background-color: rgba(0, 0, 0, 0.5);
+            cursor: pointer;
+            color: white; /* Cor da fonte branca */
+            font-size: 70%;
+            font-weight: bold;
+            
+            border-radius: 8px;
+            border: none;
+            margin-bottom: 10px;
+        }
+
+        .fixed-button:hover {
+            background-color: rgba(255, 255, 255, 0.2); /* Fundo levemente mais visível ao passar o mouse */
+            opacity: 0.8;
+            transform: scale(1.1); /* Aumenta ligeiramente o tamanho no hover */
+        }
+        
+        #mainMenu {
+            background-color: rgba(0, 0, 0, 0.5);
+            height: 40px;
+            width: 50px;
+            font-size: 270%;
+        }
+        .hidden {
+            display: none;
+        }
+        #container {
+            position: fixed;
+            widht: 75%;
+            top: 2%;
+            left: 1.5%;
+            z-index: 1002;
+            display: flex;
+            flex-direction: row;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            padding: ;
+            gap: 10px; /* Espaçamento entre os botões */
+        }
+        #refreshButton, #saveButton, #editButton {
+            background-color: rgba(0, 0, 0, 0.5);
+            height: 40px;
+            width: 50px;
+            font-size: 80%;
+        }
+			/* PARTE FIXA */
+        .parte-fixa {
+            position: fixed;
+            width: 100%;
+            height: 45%;
+            background-color: #333;
+            color: #fff;
+            padding: 0.1%;
+            text-align: center;
+            z-index: 1000;
+        }        
+        #video-container {
+            margin-top: 0px;
+            width: 100%;
+            height: 100%;
+            text-align: center;
+        }
+        video {
+            width: 100%;
+            height: 100%;
+        }
+        	/* PARTE NÃO FIXA */
+        .container {
+            position: relative;
+        }
+
+        .parte-nao-fixa {
+            position: absolute;
+            top: 50%;
+            padding: 2%;
+            width: 100%;
+        }
+        
+/* tabela das legendas */
+#subtitle-table {
+    width: 95%;
+    border-collapse: collapse;
+    margin-top: 5%;
+}
+
+#subtitle-table, #subtitle-table th, #subtitle-table td {
+    border-radius: 5px;
+}
+
+#subtitle-table th, #subtitle-table td {
+    padding: 10px;
+    text-align: left;
+    text-shadow: 0 0 20px gray; /* Sombra original */
+}
+
+#subtitle-table th {
+    background-color: #f4f4f4;
+}
+
+#subtitle-table tr {        
+    background-color: white;
+}
+
+#subtitle-table .selected {
+    background-color: #d0e4f1;
+}
+
+#subtitle-table .control-button:hover {
+    background-color: #dcdcdc;
+}
+
+/* Sombra branca no hover (desktop) */
+#subtitle-table tr:hover td {
+    text-shadow: 0 0 20px white;
+}
+
+/* Detectando dispositivos móveis */
+@media (max-width: 768px) {
+    /* Efeito de toque no mobile */
+    #subtitle-table tr:active td {
+        text-shadow: 0 0 20px white;
+    }
+}
+
+
+        
+    </style>
+</head>
+<body>
+
+<div class="parte-fixa">
+
+<div id="container">
+    <button id="mainMenu" class="fixed-button">
+        ≡
+    </button>
+
+    <button id="refreshButton" class="fixed-button hidden">
+        Nova <br>&sub; &sub;
+    </button>
+
+    <button id="saveButton" class="fixed-button hidden">
+        Salvar<br>💾
+    </button>
+
+    <button id="editButton" class="fixed-button hidden">
+        Editar<br>✎
+    </button>
+</div>
+
+    <div id="video-container">
+        <video id="video-player" controls>
+            <source id="video-source" src="" type="video/mp4">
+        </video>
+    </div>
+    
+    <div id="current-segment" style="position: absolute; bottom: 20%; width: 95%; text-align: center; color: yellow; font-size: 150%; pointer-events: none; text-shadow: 2px 2px 4px #000000;">
+        <!-- O segmento atual será exibido aqui -->
+    </div>
+   
+<div id="edit-container">
+<table>
+<tbody>
+<tr>
+<td style="width: 2%;">&nbsp;</td>
+<td>
+<p>In&iacute;cio:</p>
+<p><input id="edit-start" class="edit-container-input" readonly="readonly" type="text" /></p>
+</td>
+<td>
+<p><button id="start-plus" class="edit-container-button">▲</button></p>
+<p><button id="start-minus" class="edit-container-button">▼</button></p>
+</td>
+<td >&nbsp;</td>
+<td>
+<p>Dura&ccedil;&atilde;o:</p>
+<p><input id="edit-duration" class="edit-container-input" readonly="readonly" type="text" /></p>
+</td>
+<td>
+<p><button id="duration-plus" class="edit-container-button">▲</button></p>
+<p><button id="duration-minus" class="edit-container-button">▼</button></p>
+</td>
+<td>&nbsp;</td>
+</tr>
+<tr>
+    <td colspan="7">
+        Fim: <input id="edit-end" style="width: 25%; height: 20px; margin-bottom: 10px;" readonly="readonly" type="text" />
+        <textarea id="edit-text" class="textarea-edit-text"></textarea>
+
+        <button id="edit-save" class="edit-container-button">✔</button>
+        <button id="edit-prev" class="edit-container-button">◀◀</button>
+        <button id="edit-play" class="edit-container-button">▶</button>
+        <button id="edit-next" class="edit-container-button">▶▶ </button>
+        <button id="edit-cancel" class="edit-container-button">✘</button>
+    </td>
+</tr>
+<tr style="height: 5px;"></tr>
+</tbody>
+</table>
+</div>
+       
+</div>
+
+<div class="parte-nao-fixa">
+    <h3>Upload Video and SRT File</h3>
+
+    <form id="upload-form" enctype="multipart/form-data">
+        <label for="video-upload">Upload Video:</label>
+        <input type="file" id="video-upload" accept="video/*"><br><br>
+        <label for="srt-upload">Upload Subtitle (.srt):</label>
+        <input type="file" id="srt-upload" accept=".srt"><br><br>
+        <button type="submit" style="font-weight: bold;">Upload and Generate Links</button>
+    </form>
+
+    <table id="subtitle-table">
+        <thead>
+            <tr>
+            <th id="table-title">Legendas:</th>
+            </tr>                
+        </thead>
+        <tbody>
+            <!-- Linhas da tabela geradas dinamicamente -->
+        </tbody>
+    </table>
+</div>
+
+<script>
+let currentSegment = null;
+let segments = [];
+let videoPlayer = document.getElementById('video-player');
+let isEditing = false;
+let salvo = false;
+
+
+
+document.getElementById('upload-form').addEventListener('submit', function(event) {
+    event.preventDefault();
+    const videoFile = document.getElementById('video-upload').files[0];
+    const srtFile = document.getElementById('srt-upload').files[0];
+
+    if (videoFile && srtFile) {
+        const videoSource = document.getElementById('video-source');
+        videoSource.src = URL.createObjectURL(videoFile);
+        videoPlayer.load();
+
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            const srtContent = e.target.result;
+            segments = parseSRT(srtContent);
+            populateTable(segments, srtFile.name);
+        };
+        reader.readAsText(srtFile);
+    }
+});
+
+function parseSRT(srtContent) {
+    const lines = srtContent.split('\n');
+    let segments = [];
+    let segment = {};
+
+    lines.forEach(line => {
+        if (line.trim().match(/^\d+$/)) {
+            if (segment.text) segments.push(segment);
+            segment = { number: parseInt(line.trim(), 10) };
+        } else if (line.includes('-->')) {
+            const times = line.split(' --> ');
+            segment.start = times[0].trim();
+            segment.end = times[1].trim();
+        } else if (line.trim() !== '') {
+            segment.text = segment.text ? segment.text + ' ' + line.trim() : line.trim();
+        }
+    });
+
+    if (segment.text) segments.push(segment);
+
+    return segments.map(s => {
+        const startInSeconds = parseTimestamp(s.start);
+        const endInSeconds = parseTimestamp(s.end);
+        return {
+            ...s,
+            startInSeconds,
+            endInSeconds
+        };
+    });
+}
+
+
+
+let isSegmentPlaying = false; // Flag para controlar a reprodução do segmento
+let lastClickedElement = null; // Para armazenar o último elemento clicado
+
+// Adiciona evento de clique ao player para reprodução contínua
+videoPlayer.addEventListener('click', function(event) {
+    if (lastClickedElement !== 'table-row') {
+        isSegmentPlaying = false; // Desativa a flag para permitir reprodução normal
+        videoPlayer.play().catch(error => {
+            console.error('Erro ao tentar reproduzir o vídeo:', error);
+        });
+    }
+    lastClickedElement = 'player';
+});
+
+
+// Adiciona evento de clique às linhas da tabela
+function populateTable(segments, srtFileName) {
+        const tbody = document.querySelector('#subtitle-table tbody');
+        const tableTitle = document.getElementById('table-title');
+        tbody.innerHTML = '';
+        tableTitle.textContent = srtFileName;
+
+        segments.forEach((segment, index) => {
+            const row = document.createElement('tr');
+            row.innerHTML = `<td>${segment.text}</td>`;
+            row.addEventListener('click', function() {
+                selectSegment(segment, row);
+            });
+            tbody.appendChild(row);
+        });
+    }
+
+// formata o tempo no estilo SRT (HH:MM:SS,mmm).
+function formatSRTTime(seconds) {
+    const date = new Date(seconds * 1000);
+    const hours = date.getUTCHours().toString().padStart(2, '0');
+    const minutes = date.getUTCMinutes().toString().padStart(2, '0');
+    const secs = date.getUTCSeconds().toString().padStart(2, '0');
+    const ms = date.getUTCMilliseconds().toString().padStart(3, '0');
+    return `${hours}:${minutes}:${secs},${ms}`;
+}
+
+function parseTimestamp(timestamp) {
+    const [time, ms] = timestamp.split(',');
+    const [hours, minutes, seconds] = time.split(':').map(Number);
+    return hours * 3600 + minutes * 60 + seconds + ms / 1000;
+}
+
+function formatTime(seconds) {
+    const date = new Date(0);
+    date.setSeconds(seconds);
+    return date.toISOString().substr(11, 8);
+}
+
+
+function formatAdjustedTime(seconds) {
+    const hours = Math.floor(seconds / 3600);
+    const minutes = Math.floor((seconds % 3600) / 60);
+    const secs = Math.floor(seconds % 60);
+    const ms = Math.floor((seconds % 1) * 1000);
+
+    if (hours > 0) {
+        return `${(hours * 60 + minutes).toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')},${ms.toString().padStart(3, '0')}`;
+    } else {
+        return `${minutes.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')},${ms.toString().padStart(3, '0')}`;
+    }
+}
+   
+    function startEditing() {
+        isEditing = true;
+        const editContainer = document.getElementById('edit-container');
+        editContainer.style.display = 'block';
+        updateEditContainer();
+    }
+
+    document.getElementById('edit-play').addEventListener('click', function() {
+        playSegment(currentSegment.startInSeconds, currentSegment.endInSeconds);
+    });
+
+    document.getElementById('edit-prev').onclick = function() {
+    const currentIndex = segments.indexOf(currentSegment);
+    if (currentIndex > 0) {
+        selectSegment(segments[currentIndex - 1], document.querySelectorAll('#subtitle-table tbody tr')[currentIndex - 1]);
+    }
+};
+
+    document.getElementById('edit-next').onclick = function() {
+    const currentIndex = segments.indexOf(currentSegment);
+    if (currentIndex < segments.length - 1) {
+        selectSegment(segments[currentIndex + 1], document.querySelectorAll('#subtitle-table tbody tr')[currentIndex + 1]);
+    }
+};
+   
+   
+function checkOverlap() {
+        const currentIndex = segments.indexOf(currentSegment);
+        const prevSegment = segments[currentIndex - 1];
+        const nextSegment = segments[currentIndex + 1];
+
+        if (prevSegment && (currentSegment.startInSeconds - prevSegment.endInSeconds) < 0.05) {
+            alert("Sobreposição detectada com o segmento anterior!");
+            return false;
+        }
+
+        if (nextSegment && (nextSegment.startInSeconds - currentSegment.endInSeconds) < 0.05) {
+            alert("Sobreposição detectada com o próximo segmento!");
+            return false;
+        }
+
+        return true;
+    }    
+   
+//calcula a duração entre dois tempos e a formata no estilo SRT.
+const TIME_ADJUST_STEP = 0.05; // 50 milissegundos
+
+function adjustTime(timeInSeconds, adjustment) {
+    return Math.max(0, parseFloat((timeInSeconds + adjustment).toFixed(3)));
+}
+
+function calculateDuration(start, end) {
+    const diff = end - start;
+    return formatSRTTime(diff);
+}
+function calculateDuration(start, end) {
+    return formatAdjustedTime(end - start);
+}
+
+// Ajuste o tempo com incrementos/decrementos de 50ms (0.050 segundos)
+
+document.getElementById('start-minus').addEventListener('click', function() {
+    // Diminui o tempo de início do segmento atual
+    currentSegment.startInSeconds = adjustTime(currentSegment.startInSeconds, -0.050); // 50ms para menos
+   
+    // Atualiza o container de edição e a visualização se houver sobreposição
+    if (checkOverlap()) {
+        updateEditContainer();
+        // Aqui você pode adicionar uma função para atualizar a visualização do segmento, se necessário
+    }
+});
+
+document.getElementById('start-plus').addEventListener('click', function() {
+    // Aumenta o tempo de início do segmento atual
+    currentSegment.startInSeconds = adjustTime(currentSegment.startInSeconds, 0.050); // 50ms para mais
+   
+    // Atualiza o container de edição e a visualização se houver sobreposição
+    if (checkOverlap()) {
+        updateEditContainer();
+        // Aqui você pode adicionar uma função para atualizar a visualização do segmento, se necessário
+    }
+});
+
+document.getElementById('duration-minus').addEventListener('click', function() {
+    // Diminui o tempo de fim do segmento atual
+    currentSegment.endInSeconds = adjustTime(currentSegment.endInSeconds, -0.050); // 50ms para menos
+
+// Atualiza o container de edição e a visualização se houver sobreposição
+if (checkOverlap()) {
+    updateEditContainer();
+    // Aqui você pode adicionar uma função para atualizar a visualização do segmento, se necessário
+}
+});
+
+document.getElementById('duration-plus').addEventListener('click', function() {
+// Aumenta o tempo de fim do segmento atual
+      currentSegment.endInSeconds = adjustTime(currentSegment.endInSeconds, 0.050); // 50ms para mais
+
+// Atualiza o container de edição e a visualização se houver sobreposição
+if (checkOverlap()) {
+    updateEditContainer();
+    // Aqui você pode adicionar uma função para atualizar a visualização do segmento, se necessário
+}
+});
+
+    function updateEditContainer() {
+        if (!currentSegment) return;
+
+        document.getElementById('edit-start').value = formatAdjustedTime(currentSegment.startInSeconds);
+        document.getElementById('edit-end').value = formatAdjustedTime(currentSegment.endInSeconds);
+        document.getElementById('edit-duration').value = calculateDuration(currentSegment.startInSeconds, currentSegment.endInSeconds);
+        document.getElementById('edit-text').value = currentSegment.text;
+    }
+
+    document.getElementById('edit-save').addEventListener('click', function() {
+        if (checkOverlap()) {
+            currentSegment.text = document.getElementById('edit-text').value;
+            populateTable(segments, document.getElementById('table-title').textContent);
+            document.getElementById('edit-container').style.display = 'none';
+            isEditing = false;
+        }
+    });
+
+    document.getElementById('edit-cancel').addEventListener('click', function() {
+        document.getElementById('edit-container').style.display = 'none';
+        isEditing = false;
+    });
+
+
+function selectSegment(segment, row) {
+    currentSegment = segment;
+    clearSelection();
+    row.classList.add('selected');
+    playSegment(segment.startInSeconds, segment.endInSeconds);
+    lastClickedElement = 'table-row';
+    if (isEditing) {
+        updateEditContainer();
+    }
+}
+
+function clearSelection() {
+    const rows = document.querySelectorAll('#subtitle-table tbody tr');
+    rows.forEach(row => {
+        row.classList.remove('selected');
+    });
+}
+
+// Modifiquei o evento 'timeupdate' para parar o vídeo quando o tempo final do segmento for alcançado
+// Evento 'timeupdate' ajustado para considerar a flag
+videoPlayer.addEventListener('timeupdate', function() {
+    const currentTime = videoPlayer.currentTime;
+
+    if (isSegmentPlaying) {
+        // Define um pequeno intervalo para considerar o final do segmento
+        const pauseThreshold = currentSegment.endInSeconds - 0.150;
+
+        if (currentTime >= pauseThreshold) {
+            videoPlayer.pause();
+            isSegmentPlaying = false; // Desativa a flag após pausar
+            document.getElementById('current-segment').textContent = ''; // Limpa o texto da legenda
+        } else {
+            // Exibe a legenda do segmento atual
+            document.getElementById('current-segment').textContent = currentSegment.text;
+        }
+    } else {
+        // Atualiza para o novo segmento se o tempo atual estiver dentro de outro segmento
+        for (let i = 0; i < segments.length; i++) {
+            if (currentTime >= segments[i].startInSeconds && currentTime <= segments[i].endInSeconds) {
+                currentSegment = segments[i];
+                document.getElementById('current-segment').textContent = currentSegment.text;
+                highlightCurrentRow(i); // Atualiza a seleção na tabela
+                break;
+            }
+        }
+    }
+});
+
+
+function highlightCurrentRow(index) {
+    clearSelection(); // Limpa qualquer seleção anterior
+
+    const rows = document.querySelectorAll('#subtitle-table tbody tr');
+    if (rows[index]) {
+        rows[index].classList.add('selected'); // Adiciona a classe 'selected' para destacar a linha
+       
+        // Calcula a posição do elemento e a janela de visualização
+        const rowPosition = rows[index].getBoundingClientRect().top;
+        const windowHeight = window.innerHeight;
+
+        // Define a posição desejada (60% da altura da tela)
+        const targetPosition = windowHeight * 0.85;
+
+        // Calcula a diferença de rolagem necessária
+        const scrollOffset = rowPosition - targetPosition;
+
+        // Executa a rolagem suave ajustando a posição da linha
+        window.scrollBy({
+            top: scrollOffset,
+            behavior: 'smooth'
+        });
+    }
+}
+
+
+
+// Função para reproduzir o segmento
+function playSegment(startInSeconds, endInSeconds) {
+    videoPlayer.currentTime = startInSeconds;
+    videoPlayer.play().catch(error => {
+        console.error('Erro ao tentar reproduzir o vídeo:', error);
+    });  
+
+    // Ativa a flag para controlar a pausa automática no final do segmento
+    isSegmentPlaying = true;
+    currentSegment.endInSeconds = endInSeconds;
+}
+
+// Botões de navegação da página
+// Removidos
+
+// Função para gerar o conteúdo do arquivo SRT
+function generateSRTContent() {
+    let srtContent = '';
+    segments.forEach((segment, index) => {
+        srtContent += `${index + 1}\n`;
+        srtContent += `${formatSRTTime(segment.startInSeconds)} --> ${formatSRTTime(segment.endInSeconds)}\n`;
+        srtContent += `${segment.text}\n\n`;
+    });
+    return srtContent;
+}
+
+// Evento para o botão de editar
+document.getElementById('editButton').addEventListener('click', function() {
+        if (videoPlayer.paused) {
+            startEditing();
+        } else {
+            videoPlayer.pause();
+            setTimeout(startEditing, 100); // Pequeno atraso para garantir que o vídeo pause
+        }
+    });
+
+// Evento para o botão de atualizar
+document.getElementById('refreshButton').addEventListener('click', function() {
+    location.reload();
+});
+
+// Evento para o botão de salvar
+document.getElementById('saveButton').addEventListener('click', function() {
+      salvo = true;
+    const srtFileName = document.getElementById('table-title').textContent || 'modified_subtitles'; // Obtém o título da tabela como nome do arquivo
+    const blob = new Blob([generateSRTContent()], { type: 'text/plain' });
+    
+    const url = URL.createObjectURL(blob);
+
+    // Cria um link de download e simula um clique para iniciar o download
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${srtFileName}`; // Usa o nome do título da tabela
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+
+    // Libera o URL do Blob
+    URL.revokeObjectURL(url);     
+});
+
+
+window.addEventListener("beforeunload", function (e) {
+      if (!salvo) {
+            const confirmationMessage = "Você tem mudanças não salvas. Tem certeza de que deseja sair?";
+                e.returnValue = confirmationMessage; // Mostra a mensagem no diálogo de confirmação
+      return confirmationMessage;
+      }
+});
+
+
+// Evento para o botão do menu principal
+document.getElementById('mainMenu').addEventListener('click', function() {
+    const buttons = ['refreshButton', 'saveButton', 'editButton'];
+    buttons.forEach(buttonId => {
+        const button = document.getElementById(buttonId);
+        button.classList.toggle('hidden');
+    });
+});
+
+document.getElementById('srt-upload').addEventListener('change', function(event) {
+    var fileName = event.target.files[0].name; // Captura o nome do arquivo .srt
+    document.title = fileName; // Altera o título da página
+});
+
+</script> </body> </html>
