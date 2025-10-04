@@ -1,5 +1,5 @@
 <!-
-Versao com botoes 'prev' e 'next' funcionando.
+botoes '+' e '-' funcionando.
 ->
 <!DOCTYPE html>
 <html lang="pt-BR">
@@ -551,7 +551,7 @@ Versao com botoes 'prev' e 'next' funcionando.
      */
     function aumentarTempoInicial() {
         const inicioMs = timestampParaMs(inputInicio.value);
-        const novoInicioMs = Math.max(0, inicioMs - 100); // Diminui 100ms (antecipa)
+        const novoInicioMs = Math.max(0, inicioMs + 100); // Diminui 100ms (antecipa)
         inputInicio.value = msParaTimestamp(novoInicioMs);
 
         // Atualiza a visualização
@@ -564,7 +564,7 @@ Versao com botoes 'prev' e 'next' funcionando.
     function diminuirTempoInicial() {
         const inicioMs = timestampParaMs(inputInicio.value);
         const fimMs = timestampParaMs(inputFim.value);
-        const novoInicioMs = inicioMs + 100; // Aumenta 100ms (atrasa)
+        const novoInicioMs = inicioMs - 100; // Aumenta 100ms (atrasa)
 
         // Não deixa ultrapassar o tempo final
         if (novoInicioMs < fimMs) {
