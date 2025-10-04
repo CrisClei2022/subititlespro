@@ -185,6 +185,8 @@
             <div class="botoes-container">
                 <button id="btn-desfazer" disabled>Desfazer</button>
                 <button id="btn-refazer" disabled>Refazer</button>
+                <button id="btn-linha+" disabled>Linha +</button>
+                <button id="btn-linha-" disabled>Linha -</button>
             </div>
         </div>
     </section>
@@ -203,6 +205,8 @@
 
         const btnDesfazer = document.getElementById('btn-desfazer');
         const btnRefazer = document.getElementById('btn-refazer');
+        const btnLinhaAdicionar = document.getElementById('btn-linha+');
+        const btnLinhaRemover = document.getElementById('btn-linha-');
         
         // ==================================
         // Estrutura de Dados e Histórico
@@ -360,8 +364,15 @@
         function atualizarBotoes() {
             btnDesfazer.disabled = indiceHistorico <= 0;
             btnRefazer.disabled = indiceHistorico >= historico.length - 1;
-        }
 
+            // Habilita Linha + se houver uma linha selecionada
+            const idAtivo = parseInt(inputIdEdicao.value);
+            btnLinhaAdicionar.disabled = !idAtivo;
+
+            // Habilita Linha - se houver mais de uma linha
+            const estadoAtual = historico[indiceHistorico].legendas;
+            btnLinhaRemover.disabled = !idAtivo || estadoAtual.length <= 1;
+        }
 
         // ==================================
         // Event Listeners
@@ -398,8 +409,120 @@
                 aplicarEstado(historico[indiceHistorico]);
             }
         });
+        
+        // Botão Linha +
+        btnLinhaAdicionar.addEventListener('click', adicionarLinha);
 
+        // Botão Linha -
+        btnLinhaRemover.addEventListener('click', removerLinha);
+                
+        // ==================================
+        // Funções de Adicionar/Remover Linhas
+        // ==================================
 
+        /**
+         * Adiciona uma nova linha após a linha selecionada
+         */
+        function adicionarLinha() {
+            const idAtivo = parseInt(inputIdEdicao.value);
+            if (!idAtivo) return;
+
+            // Salva o estado atual antes de adicionar
+            salvarEstado();
+
+            const estadoAtual = historico[indiceHistorico].legendas.map(item => ({...item}));
+            const indexAtual = estadoAtual.findIndex(l => l.id === idAtivo);
+
+            if (indexAtual === -1) return;
+
+            // Gera um novo ID (maior ID existente + 1)
+            const novoId = Math.max(...estadoAtual.map(l => l.id)) + 1;
+
+            // Pega o tempo de fim da linha atual como início da nova linha
+            const legendaAtual = estadoAtual[indexAtual];
+            const inicioNovo = legendaAtual.fim;
+            const fimNovo = calcularTempoSoma(inicioNovo, 2500); // Adiciona 2,5 segundos
+
+            const novaLegenda = {
+                id: novoId,
+                inicio: inicioNovo,
+                fim: fimNovo,
+                texto: ''
+            };
+
+            // Insere a nova legenda após a atual
+            estadoAtual.splice(indexAtual + 1, 0, novaLegenda);
+
+            // Salva o novo estado
+            historico = historico.slice(0, indiceHistorico + 1);
+            historico.push({ legendas: estadoAtual, idAtivo: novoId });
+            indiceHistorico = historico.length - 1;
+
+            aplicarEstado(historico[indiceHistorico]);
+        }
+
+        /**
+         * Remove a linha selecionada
+         */
+        function removerLinha() {
+            const idAtivo = parseInt(inputIdEdicao.value);
+            if (!idAtivo) return;
+
+            const estadoAtual = historico[indiceHistorico].legendas.map(item => ({...item}));
+
+            // Não permite remover se só houver uma linha
+            if (estadoAtual.length <= 1) {
+                alert('Não é possível remover a última legenda.');
+                return;
+            }
+
+            const indexAtual = estadoAtual.findIndex(l => l.id === idAtivo);
+            if (indexAtual === -1) return;
+
+            // Remove a linha
+            estadoAtual.splice(indexAtual, 1);
+
+            // Define qual linha ficará ativa após a remoção
+            let novoIdAtivo;
+            if (indexAtual < estadoAtual.length) {
+                // Se não era a última, ativa a próxima
+                novoIdAtivo = estadoAtual[indexAtual].id;
+            } else {
+                // Se era a última, ativa a anterior
+                novoIdAtivo = estadoAtual[indexAtual - 1].id;
+            }
+
+            // Salva o novo estado
+            historico = historico.slice(0, indiceHistorico + 1);
+            historico.push({ legendas: estadoAtual, idAtivo: novoIdAtivo });
+            indiceHistorico = historico.length - 1;
+
+            aplicarEstado(historico[indiceHistorico]);
+        }
+
+        /**
+         * Função auxiliar para somar milissegundos a um timestamp
+         */
+        function calcularTempoSoma(timestamp, milissegundos) {
+            // Converte timestamp "00:00:04,000" para milissegundos
+            const partes = timestamp.split(':');
+            const horas = parseInt(partes[0]);
+            const minutos = parseInt(partes[1]);
+            const segundosParte = partes[2].split(',');
+            const segundos = parseInt(segundosParte[0]);
+            const ms = parseInt(segundosParte[1]);
+
+            const totalMs = (horas * 3600000) + (minutos * 60000) + (segundos * 1000) + ms + milissegundos;
+
+            // Converte de volta para formato timestamp
+            const h = Math.floor(totalMs / 3600000);
+            const m = Math.floor((totalMs % 3600000) / 60000);
+            const s = Math.floor((totalMs % 60000) / 1000);
+            const msRestante = totalMs % 1000;
+
+            return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')},${String(msRestante).padStart(3, '0')}`;
+        }
+        
         // ==================================
         // Inicialização
         // ==================================
