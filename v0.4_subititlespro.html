@@ -1,0 +1,290 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Editor de Legenda Dark</title>
+    <style>
+        /* CSS Básico e Tema Dark */
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #1e1e1e;
+            color: #ffffff;
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            min-height: 100vh;
+        }
+
+        section {
+            padding: 20px;
+            border-radius: 8px;
+            background-color: #2d2d2d;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+        }
+
+        /* Estilo para a Legenda de Exibição */
+        #legenda-exibicao {
+            cursor: pointer;
+            padding: 10px;
+            border-bottom: 2px dashed #4a4a4a;
+            user-select: none;
+            line-height: 1.6;
+        }
+
+        #legenda-exibicao:hover {
+            background-color: #3a3a3a;
+        }
+
+        .timestamp {
+            font-weight: bold;
+            color: #5c7cfa; /* Cor para destacar o tempo */
+            margin-right: 10px;
+        }
+
+        /* Estilo para a Área de Edição */
+        #area-edicao {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        .input-group {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+
+        .input-group label {
+            width: 80px; /* Largura fixa para os labels */
+            flex-shrink: 0;
+            font-weight: bold;
+        }
+
+        /* Estilo para os campos de input */
+        .input-campo {
+            padding: 10px;
+            border: 1px solid #4a4a4a;
+            border-radius: 4px;
+            font-size: 1em;
+            background-color: #3a3a3a;
+            color: #ffffff;
+            box-sizing: border-box;
+            /* Diferencia o tamanho do input de texto dos de tempo */
+            flex-grow: 1; 
+        }
+
+        #input-inicio, #input-fim {
+            width: 150px; /* Largura menor para os tempos */
+            flex-grow: 0;
+        }
+
+        /* Estilo para os botões */
+        .botoes-container {
+            display: flex;
+            gap: 10px;
+            margin-top: 10px;
+        }
+
+        button {
+            padding: 10px 15px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: background-color 0.2s;
+        }
+
+        #btn-desfazer {
+            background-color: #5c7cfa;
+            color: #ffffff;
+        }
+
+        #btn-desfazer:hover {
+            background-color: #4a67e6;
+        }
+
+        #btn-refazer {
+            background-color: #f7931e;
+            color: #1e1e1e;
+        }
+
+        #btn-refazer:hover {
+            background-color: #e6861a;
+        }
+    </style>
+</head>
+<body>
+
+    <section>
+        <h2>Área de Edição</h2>
+        <div id="area-edicao">
+            
+            <div class="input-group">
+                <label for="input-inicio">Início:</label>
+                <input type="text" id="input-inicio" class="input-campo" placeholder="Ex: 00:00:01,500">
+            </div>
+
+            <div class="input-group">
+                <label for="input-fim">Fim:</label>
+                <input type="text" id="input-fim" class="input-campo" placeholder="Ex: 00:00:04,000">
+            </div>
+
+            <div class="input-group">
+                <label for="input-texto">Texto:</label>
+                <input type="text" id="input-texto" class="input-campo" placeholder="Texto da legenda para edição">
+            </div>
+            
+            <div class="botoes-container">
+                <button id="btn-desfazer">Desfazer</button>
+                <button id="btn-refazer" disabled>Refazer</button>
+            </div>
+        </div>
+    </section>
+
+    <section>
+        <h2>Legenda Atual (Clique para Editar)</h2>
+        <div id="legenda-exibicao">
+            <span id="display-tempo" class="timestamp">00:00:01,500 --> 00:00:04,000</span>
+            <span id="display-texto">Olá, bem-vindo ao nosso vídeo de hoje.</span>
+        </div>
+    </section>
+
+    <script>
+        // Elementos do DOM
+        const legendaExibicao = document.getElementById('legenda-exibicao');
+        const displayTempo = document.getElementById('display-tempo');
+        const displayTexto = document.getElementById('display-texto');
+        
+        const inputInicio = document.getElementById('input-inicio');
+        const inputFim = document.getElementById('input-fim');
+        const inputTexto = document.getElementById('input-texto');
+        const inputs = [inputInicio, inputFim, inputTexto];
+
+        const btnDesfazer = document.getElementById('btn-desfazer');
+        const btnRefazer = document.getElementById('btn-refazer');
+        
+        // Estrutura do estado: {inicio: string, fim: string, texto: string}
+        let estadoInicial = {
+            inicio: '00:00:01,500', 
+            fim: '00:00:04,000', 
+            texto: 'Olá, bem-vindo ao nosso vídeo de hoje.'
+        };
+
+        // Histórico de estados para Desfazer/Refazer
+        let historico = [estadoInicial];
+        let indiceHistorico = 0;
+
+        // --- Funções de Estado e Histórico ---
+
+        /**
+         * Aplica um estado do histórico aos inputs e aos elementos de exibição.
+         * @param {Object} estado O objeto de estado a ser aplicado.
+         */
+        function aplicarEstado(estado) {
+            // Atualiza os inputs
+            inputInicio.value = estado.inicio;
+            inputFim.value = estado.fim;
+            inputTexto.value = estado.texto;
+            
+            // Atualiza a exibição
+            displayTempo.textContent = `${estado.inicio} --> ${estado.fim}`;
+            displayTexto.textContent = estado.texto;
+            
+            atualizarBotoes();
+        }
+        
+        /**
+         * Pega o estado atual dos inputs.
+         * @returns {Object} O objeto de estado atual.
+         */
+        function getEstadoAtual() {
+            return {
+                inicio: inputInicio.value.trim(),
+                fim: inputFim.value.trim(),
+                texto: inputTexto.value.trim()
+            };
+        }
+
+        /**
+         * Adiciona o estado atual ao histórico.
+         */
+        function salvarEstado() {
+            const novoEstado = getEstadoAtual();
+            const ultimoEstado = historico[historico.length - 1];
+
+            // Verifica se o estado mudou
+            if (novoEstado.inicio === ultimoEstado.inicio &&
+                novoEstado.fim === ultimoEstado.fim &&
+                novoEstado.texto === ultimoEstado.texto) {
+                return; // Não salva se nada mudou
+            }
+
+            // Remove estados de "refazer" se o usuário começar a digitar de novo
+            historico = historico.slice(0, indiceHistorico + 1);
+
+            // Adiciona o novo estado
+            historico.push(novoEstado);
+            indiceHistorico = historico.length - 1;
+
+            // Atualiza o estado dos botões
+            atualizarBotoes();
+        }
+
+        /**
+         * Atualiza os atributos 'disabled' dos botões Desfazer e Refazer.
+         */
+        function atualizarBotoes() {
+            btnDesfazer.disabled = indiceHistorico <= 0;
+            btnRefazer.disabled = indiceHistorico >= historico.length - 1;
+        }
+
+        // --- Event Listeners ---
+
+        // 1. Quando o usuário clica na legenda
+        legendaExibicao.addEventListener('click', () => {
+            // Pega o estado de exibição atual e coloca nos inputs
+            const estado = {
+                inicio: displayTempo.textContent.split(' --> ')[0],
+                fim: displayTempo.textContent.split(' --> ')[1],
+                texto: displayTexto.textContent
+            };
+            aplicarEstado(estado);
+            inputTexto.focus(); // Foca no campo de texto para começar a editar
+        });
+        
+        // 2. Evento de 'input' em qualquer campo (Atualização em tempo real da exibição)
+        inputs.forEach(input => {
+            input.addEventListener('input', () => {
+                const estado = getEstadoAtual();
+                displayTempo.textContent = `${estado.inicio} --> ${estado.fim}`;
+                displayTexto.textContent = estado.texto;
+            });
+            
+            // 3. Evento 'blur' em qualquer campo (Salva o estado após o usuário sair do campo)
+            input.addEventListener('blur', salvarEstado);
+        });
+        
+        // 4. Botão Desfazer
+        btnDesfazer.addEventListener('click', () => {
+            if (indiceHistorico > 0) {
+                indiceHistorico--;
+                aplicarEstado(historico[indiceHistorico]);
+            }
+        });
+
+        // 5. Botão Refazer
+        btnRefazer.addEventListener('click', () => {
+            if (indiceHistorico < historico.length - 1) {
+                indiceHistorico++;
+                aplicarEstado(historico[indiceHistorico]);
+            }
+        });
+
+        // Inicializa o estado dos inputs e botões
+        aplicarEstado(estadoInicial);
+    </script>
+</body>
+</html>
