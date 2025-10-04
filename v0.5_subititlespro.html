@@ -11,17 +11,18 @@
         body {
             font-family: Arial, sans-serif;
             background-color: #1e1e1e;
-            color: #ffffff;
-            margin: 0;
+            color: #ffffff;0
             padding: 20px;
             display: flex;
             flex-direction: column;
+            align-items: center;
             gap: 20px;
             min-height: 100vh;
         }
 
         section {
             padding: 20px;
+            max-width: 600px;
             border-radius: 8px;
             background-color: #2d2d2d;
             box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
@@ -120,8 +121,9 @@
 
         /* Estilo para os botões */
         .botoes-container {
-            display: grid;
-            grid-template-columns: repeat(4, 1fr); 
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
             gap: 10px;
             margin: 10px auto 0;
         }
@@ -133,6 +135,7 @@
             cursor: pointer;
             font-weight: bold;
             transition: background-color 0.2s;
+            flex-basis: calc(25% - 7.5px); /* 25% da largura menos o gap */
         }
 
         #btn-desfazer {
