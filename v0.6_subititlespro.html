@@ -1,0 +1,609 @@
+<!-
+Versao com botoes 'prev' e 'next' funcionando.
+->
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Editor de Legenda Multi-Trecho Dark</title>
+    <style>
+        /* ================================== */
+        /* CSS Básico e Tema Dark */
+        /* ================================== */
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #1e1e1e;
+            color: #ffffff;0
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 20px;
+            min-height: 100vh;
+        }
+
+        section {
+            padding: 20px;
+            max-width: 600px;
+            border-radius: 8px;
+            background-color: #2d2d2d;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+        }
+
+        /* ================================== */
+        /* Estilo para a Lista de Legendas */
+        /* ================================== */
+        #lista-legendas {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+        }
+
+        .legenda-item {
+            cursor: pointer;
+            padding: 8px 12px;
+            border-radius: 4px;
+            transition: background-color 0.15s;
+            display: flex;
+            gap: 15px;
+            align-items: baseline;
+            line-height: 1.4;
+        }
+
+        .legenda-item:hover {
+            background-color: #3a3a3a;
+        }
+
+        /* Marcação para o item que está atualmente sendo editado */
+        .legenda-item.legenda-ativa {
+            background-color: #5c7cfa; /* Fundo azul para o item ativo */
+            color: #1e1e1e;
+            font-weight: bold;
+        }
+
+        .legenda-item.legenda-ativa .timestamp,
+        .legenda-item.legenda-ativa .legenda-id {
+            color: #1e1e1e; 
+        }
+
+        .legenda-id {
+            font-weight: bold;
+            color: #999999;
+            width: 20px; /* Largura para o número */
+            flex-shrink: 0;
+        }
+        
+        .timestamp {
+            font-weight: bold;
+            color: #5c7cfa;
+            width: 170px; /* Largura para o tempo */
+            flex-shrink: 0;
+        }
+
+        .legenda-texto {
+            flex-grow: 1;
+        }
+
+        /* ================================== */
+        /* Estilo para a Área de Edição */
+        /* ================================== */
+        #area-edicao {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        .input-group {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+
+        .input-group label {
+            width: 80px; 
+            flex-shrink: 0;
+            font-weight: bold;
+        }
+
+        .input-campo {
+            padding: 10px;
+            border: 1px solid #4a4a4a;
+            border-radius: 4px;
+            font-size: 1em;
+            background-color: #3a3a3a;
+            color: #ffffff;
+            box-sizing: border-box;
+            flex-grow: 1; 
+        }
+
+        #input-inicio, #input-fim {
+            width: 150px; 
+            flex-grow: 0;
+        }
+
+        /* Estilo para os botões */
+        .botoes-container {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 10px;
+            margin: 10px auto 0;
+        }
+
+        button {
+            padding: 10px 15px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: background-color 0.2s;
+            flex-basis: calc(25% - 7.5px); /* 25% da largura menos o gap */
+        }
+
+        #btn-desfazer {
+            background-color: #5c7cfa;
+            color: #ffffff;
+        }
+
+        #btn-desfazer:hover {
+            background-color: #4a67e6;
+        }
+
+        #btn-refazer {
+            background-color: #f7931e;
+            color: #1e1e1e;
+        }
+
+        #btn-refazer:hover {
+            background-color: #e6861a;
+        }
+    </style>
+</head>
+<body>
+
+    <section>
+        <h2>Lista de Legendas (Clique em qualquer linha para editar)</h2>
+        <div id="lista-legendas">
+            </div>
+    </section>
+
+    <section>
+        <h2>Área de Edição</h2>
+        <div id="area-edicao">
+            
+            <input type="hidden" id="input-id-edicao">
+
+            <div class="input-group">
+                <label for="input-inicio">Início:</label>
+                <input type="text" id="input-inicio" class="input-campo" placeholder="Ex: 00:00:01,500">
+            </div>
+
+            <div class="input-group">
+                <label for="input-fim">Fim:</label>
+                <input type="text" id="input-fim" class="input-campo" placeholder="Ex: 00:00:04,000">
+            </div>
+
+            <div class="input-group">
+                <label for="input-texto">Texto:</label>
+                <input type="text" id="input-texto" class="input-campo" placeholder="Texto da legenda para edição">
+            </div>
+            
+            <div class="botoes-container">
+                <button id="btn-desfazer" disabled>Desfazer</button>
+                <button id="btn-refazer" disabled>Refazer</button>
+                <button id="btn-linha+" disabled>Linha +</button>
+                <button id="btn-linha-" disabled>Linha -</button>
+                <button id="btn-prev" disabled>◀◀</button>
+                <button id="btn-play" disabled>▶</button>
+                <button id="btn-next" disabled>▶▶ </button>
+            </div>
+        </div>
+    </section>
+
+    <script>
+        // ==================================
+        // Elementos do DOM
+        // ==================================
+        const listaLegendasDiv = document.getElementById('lista-legendas'); 
+        const inputIdEdicao = document.getElementById('input-id-edicao'); 
+        
+        const inputInicio = document.getElementById('input-inicio');
+        const inputFim = document.getElementById('input-fim');
+        const inputTexto = document.getElementById('input-texto');
+        const inputs = [inputInicio, inputFim, inputTexto];
+
+        const btnDesfazer = document.getElementById('btn-desfazer');
+        const btnRefazer = document.getElementById('btn-refazer');
+        const btnLinhaAdicionar = document.getElementById('btn-linha+');
+        const btnLinhaRemover = document.getElementById('btn-linha-');
+        
+        // ==================================
+        // Estrutura de Dados e Histórico
+        // ==================================
+        // Estrutura de cada item: {id: number, inicio: string, fim: string, texto: string}
+        const legendasIniciais = [
+            { id: 1, inicio: '00:00:01,500', fim: '00:00:04,000', texto: 'Olá, bem-vindo ao nosso vídeo de hoje.' },
+            { id: 2, inicio: '00:00:04,500', fim: '00:00:06,000', texto: 'Vamos falar sobre um tema muito interessante.' },
+            { id: 3, inicio: '00:00:06,500', fim: '00:00:09,000', texto: 'Espero que você esteja preparado para aprender algo novo.' }
+        ];
+
+        // Estrutura de Dados e Histórico
+        // Agora o histórico armazena um objeto com as legendas E o ID ativo
+        let historico = [{ legendas: legendasIniciais, idAtivo: legendasIniciais[0].id }];
+        let indiceHistorico = 0;
+
+
+        // ==================================
+        // Funções de Renderização e Carregamento
+        // ==================================
+
+        /**
+         * Renderiza a lista de legendas na tela (HTML).
+         * @param {Array<Object>} legendas O array completo de legendas.
+         */
+        function renderizarLista(legendas) {
+            listaLegendasDiv.innerHTML = ''; // Limpa a lista atual
+
+            const idAtivo = parseInt(inputIdEdicao.value);
+
+            legendas.forEach(legenda => {
+                const itemDiv = document.createElement('div');
+                itemDiv.setAttribute('data-id', legenda.id);
+                itemDiv.classList.add('legenda-item');
+                
+                // Define a classe 'ativa' se for o item em foco
+                if (legenda.id === idAtivo) {
+                    itemDiv.classList.add('legenda-ativa');
+                }
+
+                itemDiv.innerHTML = `
+                    <span class="legenda-id">${legenda.id}</span>
+                    <span class="timestamp">${legenda.inicio} --> ${legenda.fim}</span>
+                    <span class="legenda-texto">${legenda.texto}</span>
+                `;
+                
+                // Adiciona o evento de clique para carregar o item para edição
+                itemDiv.addEventListener('click', () => carregarLegendaParaEdicao(legenda.id, legendas));
+                
+                listaLegendasDiv.appendChild(itemDiv);
+            });
+        }
+
+        /**
+         * Carrega os dados de uma legenda específica para os inputs de edição.
+         * @param {number} id O ID da legenda a ser carregada.
+         * @param {Array<Object>} legendas O array de legendas a ser consultado.
+         */
+        function carregarLegendaParaEdicao(id, legendas) {
+            const legenda = legendas.find(l => l.id === id);
+            if (!legenda) return;
+            
+            // Atualiza os inputs
+            inputIdEdicao.value = legenda.id; // Define o ID sendo editado
+            inputInicio.value = legenda.inicio;
+            inputFim.value = legenda.fim;
+            inputTexto.value = legenda.texto;
+            
+            // Atualiza a classe ativa na lista renderizada
+            document.querySelectorAll('.legenda-item').forEach(item => {
+                item.classList.remove('legenda-ativa');
+            });
+            const itemAtivo = document.querySelector(`[data-id="${id}"]`);
+            if (itemAtivo) {
+                itemAtivo.classList.add('legenda-ativa');
+            }
+
+            inputTexto.focus();
+        }
+
+        // ==================================
+        // Funções de Estado e Histórico (Desfazer/Refazer)
+        // ==================================
+
+        /**
+         * Aplica um estado do histórico (o array completo de legendas).
+         * @param {Array<Object>} novoHistorico O array completo de legendas a ser aplicado.
+         */
+        function aplicarEstado(estadoHistorico) {
+            const { legendas, idAtivo } = estadoHistorico;
+
+            // 1. Renderiza a lista na tela
+            renderizarLista(legendas);
+
+            // 2. Carrega o item que estava ativo quando este estado foi salvo
+            if (idAtivo && legendas.find(l => l.id === idAtivo)) {
+                carregarLegendaParaEdicao(idAtivo, legendas);
+            } else if (legendas.length > 0) {
+                carregarLegendaParaEdicao(legendas[0].id, legendas);
+            }
+
+            atualizarBotoes();
+        }
+
+        /**
+         * Pega o estado atual de edição (o array completo)
+         * @returns {Array<Object>} O array de legendas com o item editado atualizado.
+         */
+        function getEstadoAtual() {
+            let estadoAtual = historico[indiceHistorico].legendas.map(item => ({...item}));
+
+            const idAtivo = parseInt(inputIdEdicao.value);
+
+            if (idAtivo) {
+                const index = estadoAtual.findIndex(l => l.id === idAtivo);
+                if (index !== -1) {
+                    estadoAtual[index] = {
+                        id: idAtivo,
+                        inicio: inputInicio.value.trim(),
+                        fim: inputFim.value.trim(),
+                        texto: inputTexto.value.trim()
+                    };
+                }
+            }
+            return estadoAtual;
+        }
+
+        /**
+         * Adiciona o estado atual ao histórico.
+         */
+        function salvarEstado() {
+            const novoEstado = getEstadoAtual();
+            const idAtivo = parseInt(inputIdEdicao.value);
+            const ultimoEstado = historico[indiceHistorico]; 
+
+            // Compara apenas as legendas
+            if (JSON.stringify(novoEstado) === JSON.stringify(ultimoEstado.legendas)) {
+                return;
+            }
+
+            historico = historico.slice(0, indiceHistorico + 1);
+
+            // Adiciona o novo estado com as legendas E o ID ativo
+            historico.push({ legendas: novoEstado, idAtivo: idAtivo });
+            indiceHistorico = historico.length - 1;
+
+            renderizarLista(novoEstado); 
+
+            atualizarBotoes();
+        }
+
+        /**
+         * Atualiza os atributos 'disabled' dos botões Desfazer e Refazer.
+         */
+        function atualizarBotoes() {
+            btnDesfazer.disabled = indiceHistorico <= 0;
+            btnRefazer.disabled = indiceHistorico >= historico.length - 1;
+
+            // Habilita Linha + se houver uma linha selecionada
+            const idAtivo = parseInt(inputIdEdicao.value);
+            btnLinhaAdicionar.disabled = !idAtivo;
+
+            // Habilita Linha - se houver mais de uma linha
+            const estadoAtual = historico[indiceHistorico].legendas;
+            btnLinhaRemover.disabled = !idAtivo || estadoAtual.length <= 1;
+
+            // Habilita/desabilita botões de navegação
+            const indexAtual = estadoAtual.findIndex(l => l.id === idAtivo);
+            btnPrev.disabled = !idAtivo || indexAtual <= 0;
+            btnNext.disabled = !idAtivo || indexAtual >= estadoAtual.length - 1;
+        }
+
+        // ==================================
+        // Event Listeners
+        // ==================================
+
+        // Eventos de 'input' e 'blur' para cada campo de edição
+        inputs.forEach(input => {
+            input.addEventListener('input', () => {
+                // Atualiza a exibição em tempo real na lista
+                const idAtivo = parseInt(inputIdEdicao.value);
+                const itemDiv = document.querySelector(`[data-id="${idAtivo}"]`);
+                if (itemDiv) {
+                    itemDiv.querySelector('.timestamp').textContent = `${inputInicio.value.trim()} --> ${inputFim.value.trim()}`;
+                    itemDiv.querySelector('.legenda-texto').textContent = inputTexto.value.trim();
+                }
+            });
+            
+            // Salva o estado completo após o usuário sair do campo
+            input.addEventListener('blur', salvarEstado);
+        });
+        
+        // Botão Desfazer
+        btnDesfazer.addEventListener('click', () => {
+            if (indiceHistorico > 0) {
+                indiceHistorico--;
+                aplicarEstado(historico[indiceHistorico]);
+            }
+        });
+
+        // Botão Refazer
+        btnRefazer.addEventListener('click', () => {
+            if (indiceHistorico < historico.length - 1) {
+                indiceHistorico++;
+                aplicarEstado(historico[indiceHistorico]);
+            }
+        });
+        
+        // Botão Linha +
+        btnLinhaAdicionar.addEventListener('click', adicionarLinha);
+
+        // Botão Linha -
+        btnLinhaRemover.addEventListener('click', removerLinha);
+                
+        // ==================================
+        // Funções de Adicionar/Remover Linhas
+        // ==================================
+
+        /**
+         * Adiciona uma nova linha após a linha selecionada
+         */
+        function adicionarLinha() {
+            const idAtivo = parseInt(inputIdEdicao.value);
+            if (!idAtivo) return;
+
+            // Salva o estado atual antes de adicionar
+            salvarEstado();
+
+            const estadoAtual = historico[indiceHistorico].legendas.map(item => ({...item}));
+            const indexAtual = estadoAtual.findIndex(l => l.id === idAtivo);
+
+            if (indexAtual === -1) return;
+
+            // Gera um novo ID (maior ID existente + 1)
+            const novoId = Math.max(...estadoAtual.map(l => l.id)) + 1;
+
+            // Pega o tempo de fim da linha atual como início da nova linha
+            const legendaAtual = estadoAtual[indexAtual];
+            const inicioNovo = legendaAtual.fim;
+            const fimNovo = calcularTempoSoma(inicioNovo, 2500); // Adiciona 2,5 segundos
+
+            const novaLegenda = {
+                id: novoId,
+                inicio: inicioNovo,
+                fim: fimNovo,
+                texto: ''
+            };
+
+            // Insere a nova legenda após a atual
+            estadoAtual.splice(indexAtual + 1, 0, novaLegenda);
+
+            // Salva o novo estado
+            historico = historico.slice(0, indiceHistorico + 1);
+            historico.push({ legendas: estadoAtual, idAtivo: novoId });
+            indiceHistorico = historico.length - 1;
+
+            aplicarEstado(historico[indiceHistorico]);
+        }
+
+        /**
+         * Remove a linha selecionada
+         */
+        function removerLinha() {
+            const idAtivo = parseInt(inputIdEdicao.value);
+            if (!idAtivo) return;
+
+            const estadoAtual = historico[indiceHistorico].legendas.map(item => ({...item}));
+
+            // Não permite remover se só houver uma linha
+            if (estadoAtual.length <= 1) {
+                alert('Não é possível remover a última legenda.');
+                return;
+            }
+
+            const indexAtual = estadoAtual.findIndex(l => l.id === idAtivo);
+            if (indexAtual === -1) return;
+
+            // Remove a linha
+            estadoAtual.splice(indexAtual, 1);
+
+            // Define qual linha ficará ativa após a remoção
+            let novoIdAtivo;
+            if (indexAtual < estadoAtual.length) {
+                // Se não era a última, ativa a próxima
+                novoIdAtivo = estadoAtual[indexAtual].id;
+            } else {
+                // Se era a última, ativa a anterior
+                novoIdAtivo = estadoAtual[indexAtual - 1].id;
+            }
+
+            // Salva o novo estado
+            historico = historico.slice(0, indiceHistorico + 1);
+            historico.push({ legendas: estadoAtual, idAtivo: novoIdAtivo });
+            indiceHistorico = historico.length - 1;
+
+            aplicarEstado(historico[indiceHistorico]);
+        }
+
+        /**
+         * Função auxiliar para somar milissegundos a um timestamp
+         */
+        function calcularTempoSoma(timestamp, milissegundos) {
+            // Converte timestamp "00:00:04,000" para milissegundos
+            const partes = timestamp.split(':');
+            const horas = parseInt(partes[0]);
+            const minutos = parseInt(partes[1]);
+            const segundosParte = partes[2].split(',');
+            const segundos = parseInt(segundosParte[0]);
+            const ms = parseInt(segundosParte[1]);
+
+            const totalMs = (horas * 3600000) + (minutos * 60000) + (segundos * 1000) + ms + milissegundos;
+
+            // Converte de volta para formato timestamp
+            const h = Math.floor(totalMs / 3600000);
+            const m = Math.floor((totalMs % 3600000) / 60000);
+            const s = Math.floor((totalMs % 60000) / 1000);
+            const msRestante = totalMs % 1000;
+
+            return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')},${String(msRestante).padStart(3, '0')}`;
+        }
+        
+        // ==================================
+        // Funções de Navegação Entre Linhas
+        // ==================================
+
+        /**
+         * Navega para a linha anterior
+         */
+        function irParaLinhaAnterior() {
+            const idAtivo = parseInt(inputIdEdicao.value);
+            if (!idAtivo) return;
+
+            const estadoAtual = historico[indiceHistorico].legendas;
+            const indexAtual = estadoAtual.findIndex(l => l.id === idAtivo);
+
+            if (indexAtual > 0) {
+                // Salva o estado atual antes de navegar
+                salvarEstado();
+
+                // Carrega a linha anterior
+                const linhaAnterior = estadoAtual[indexAtual - 1];
+                carregarLegendaParaEdicao(linhaAnterior.id, estadoAtual);
+            }
+        }
+
+        /**
+         * Navega para a próxima linha
+         */
+        function irParaProximaLinha() {
+            const idAtivo = parseInt(inputIdEdicao.value);
+            if (!idAtivo) return;
+
+            const estadoAtual = historico[indiceHistorico].legendas;
+            const indexAtual = estadoAtual.findIndex(l => l.id === idAtivo);
+
+            if (indexAtual < estadoAtual.length - 1) {
+                // Salva o estado atual antes de navegar
+                salvarEstado();
+
+                // Carrega a próxima linha
+                const proximaLinha = estadoAtual[indexAtual + 1];
+                carregarLegendaParaEdicao(proximaLinha.id, estadoAtual);
+            }
+        }
+
+        // ==================================
+        // Event Listeners para Navegação
+        // ==================================
+
+        const btnPrev = document.getElementById('btn-prev');
+        const btnNext = document.getElementById('btn-next');
+
+        btnPrev.addEventListener('click', irParaLinhaAnterior);
+        btnNext.addEventListener('click', irParaProximaLinha);
+
+        // ==================================
+        // Inicialização
+        // ==================================
+        
+        // Define o primeiro item como ativo para edição
+        if (legendasIniciais.length > 0) {
+            inputIdEdicao.value = legendasIniciais[0].id;
+        }
+
+        // Carrega o estado inicial
+        aplicarEstado(historico[0]);
+
+    </script>
+</body>
+</html>
