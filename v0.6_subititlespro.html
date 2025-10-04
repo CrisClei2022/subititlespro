@@ -217,6 +217,8 @@ Versao com botoes 'prev' e 'next' funcionando.
         const btnRefazer = document.getElementById('btn-refazer');
         const btnLinhaAdicionar = document.getElementById('btn-linha+');
         const btnLinhaRemover = document.getElementById('btn-linha-');
+        const btnPrevLinha = document.getElementById('btn-prev'); 
+		const btnNextLinha = document.getElementById('btn-next');
         
         // ==================================
         // Estrutura de Dados e Histórico
@@ -383,10 +385,11 @@ Versao com botoes 'prev' e 'next' funcionando.
             const estadoAtual = historico[indiceHistorico].legendas;
             btnLinhaRemover.disabled = !idAtivo || estadoAtual.length <= 1;
 
-            // Habilita/desabilita botões de navegação
-            const indexAtual = estadoAtual.findIndex(l => l.id === idAtivo);
-            btnPrev.disabled = !idAtivo || indexAtual <= 0;
-            btnNext.disabled = !idAtivo || indexAtual >= estadoAtual.length - 1;
+        // Habilita/desabilita botões de navegação
+        const indexAtual = estadoAtual.findIndex(l => l.id === idAtivo);
+        // Use btnPrevLinha e btnNextLinha
+        btnPrevLinha.disabled = !idAtivo || indexAtual <= 0;
+        btnNextLinha.disabled = !idAtivo || indexAtual >= estadoAtual.length - 1;
         }
 
         // ==================================
@@ -430,7 +433,11 @@ Versao com botoes 'prev' e 'next' funcionando.
 
         // Botão Linha -
         btnLinhaRemover.addEventListener('click', removerLinha);
-                
+
+        // Navegação        
+        btnPrevLinha.addEventListener('click', irParaLinhaAnterior);
+        btnNextLinha.addEventListener('click', irParaProximaLinha);
+        
         // ==================================
         // Funções de Adicionar/Remover Linhas
         // ==================================
@@ -556,9 +563,15 @@ Versao com botoes 'prev' e 'next' funcionando.
                 // Salva o estado atual antes de navegar
                 salvarEstado();
 
+                // Pega o estado atualizado após salvar
+                const novoEstado = historico[indiceHistorico].legendas;
+                const linhaAnterior = novoEstado[indexAtual - 1];
+
                 // Carrega a linha anterior
-                const linhaAnterior = estadoAtual[indexAtual - 1];
-                carregarLegendaParaEdicao(linhaAnterior.id, estadoAtual);
+                carregarLegendaParaEdicao(linhaAnterior.id, novoEstado);
+
+                // Atualiza os botões após a navegação
+                atualizarBotoes();
             }
         }
 
@@ -576,21 +589,17 @@ Versao com botoes 'prev' e 'next' funcionando.
                 // Salva o estado atual antes de navegar
                 salvarEstado();
 
+                // Pega o estado atualizado após salvar
+                const novoEstado = historico[indiceHistorico].legendas;
+                const proximaLinha = novoEstado[indexAtual + 1];
+
                 // Carrega a próxima linha
-                const proximaLinha = estadoAtual[indexAtual + 1];
-                carregarLegendaParaEdicao(proximaLinha.id, estadoAtual);
+                carregarLegendaParaEdicao(proximaLinha.id, novoEstado);
+
+                // Atualiza os botões após a navegação
+                atualizarBotoes();
             }
         }
-
-        // ==================================
-        // Event Listeners para Navegação
-        // ==================================
-
-        const btnPrev = document.getElementById('btn-prev');
-        const btnNext = document.getElementById('btn-next');
-
-        btnPrev.addEventListener('click', irParaLinhaAnterior);
-        btnNext.addEventListener('click', irParaProximaLinha);
 
         // ==================================
         // Inicialização
