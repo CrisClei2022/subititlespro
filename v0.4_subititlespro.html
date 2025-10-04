@@ -3,9 +3,11 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Editor de Legenda Dark</title>
+    <title>Editor de Legenda Multi-Trecho Dark</title>
     <style>
+        /* ================================== */
         /* CSS Básico e Tema Dark */
+        /* ================================== */
         body {
             font-family: Arial, sans-serif;
             background-color: #1e1e1e;
@@ -25,26 +27,63 @@
             box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
         }
 
-        /* Estilo para a Legenda de Exibição */
-        #legenda-exibicao {
-            cursor: pointer;
-            padding: 10px;
-            border-bottom: 2px dashed #4a4a4a;
-            user-select: none;
-            line-height: 1.6;
+        /* ================================== */
+        /* Estilo para a Lista de Legendas */
+        /* ================================== */
+        #lista-legendas {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
         }
 
-        #legenda-exibicao:hover {
+        .legenda-item {
+            cursor: pointer;
+            padding: 8px 12px;
+            border-radius: 4px;
+            transition: background-color 0.15s;
+            display: flex;
+            gap: 15px;
+            align-items: baseline;
+            line-height: 1.4;
+        }
+
+        .legenda-item:hover {
             background-color: #3a3a3a;
         }
 
-        .timestamp {
+        /* Marcação para o item que está atualmente sendo editado */
+        .legenda-item.legenda-ativa {
+            background-color: #5c7cfa; /* Fundo azul para o item ativo */
+            color: #1e1e1e;
             font-weight: bold;
-            color: #5c7cfa; /* Cor para destacar o tempo */
-            margin-right: 10px;
         }
 
+        .legenda-item.legenda-ativa .timestamp,
+        .legenda-item.legenda-ativa .legenda-id {
+            color: #1e1e1e; 
+        }
+
+        .legenda-id {
+            font-weight: bold;
+            color: #999999;
+            width: 20px; /* Largura para o número */
+            flex-shrink: 0;
+        }
+        
+        .timestamp {
+            font-weight: bold;
+            color: #5c7cfa;
+            width: 170px; /* Largura para o tempo */
+            flex-shrink: 0;
+        }
+
+        .legenda-texto {
+            flex-grow: 1;
+        }
+
+        /* ================================== */
         /* Estilo para a Área de Edição */
+        /* ================================== */
         #area-edicao {
             display: flex;
             flex-direction: column;
@@ -58,12 +97,11 @@
         }
 
         .input-group label {
-            width: 80px; /* Largura fixa para os labels */
+            width: 80px; 
             flex-shrink: 0;
             font-weight: bold;
         }
 
-        /* Estilo para os campos de input */
         .input-campo {
             padding: 10px;
             border: 1px solid #4a4a4a;
@@ -72,12 +110,11 @@
             background-color: #3a3a3a;
             color: #ffffff;
             box-sizing: border-box;
-            /* Diferencia o tamanho do input de texto dos de tempo */
             flex-grow: 1; 
         }
 
         #input-inicio, #input-fim {
-            width: 150px; /* Largura menor para os tempos */
+            width: 150px; 
             flex-grow: 0;
         }
 
@@ -119,9 +156,17 @@
 <body>
 
     <section>
+        <h2>Lista de Legendas (Clique em qualquer linha para editar)</h2>
+        <div id="lista-legendas">
+            </div>
+    </section>
+
+    <section>
         <h2>Área de Edição</h2>
         <div id="area-edicao">
             
+            <input type="hidden" id="input-id-edicao">
+
             <div class="input-group">
                 <label for="input-inicio">Início:</label>
                 <input type="text" id="input-inicio" class="input-campo" placeholder="Ex: 00:00:01,500">
@@ -138,25 +183,18 @@
             </div>
             
             <div class="botoes-container">
-                <button id="btn-desfazer">Desfazer</button>
+                <button id="btn-desfazer" disabled>Desfazer</button>
                 <button id="btn-refazer" disabled>Refazer</button>
             </div>
         </div>
     </section>
 
-    <section>
-        <h2>Legenda Atual (Clique para Editar)</h2>
-        <div id="legenda-exibicao">
-            <span id="display-tempo" class="timestamp">00:00:01,500 --> 00:00:04,000</span>
-            <span id="display-texto">Olá, bem-vindo ao nosso vídeo de hoje.</span>
-        </div>
-    </section>
-
     <script>
+        // ==================================
         // Elementos do DOM
-        const legendaExibicao = document.getElementById('legenda-exibicao');
-        const displayTempo = document.getElementById('display-tempo');
-        const displayTexto = document.getElementById('display-texto');
+        // ==================================
+        const listaLegendasDiv = document.getElementById('lista-legendas'); 
+        const inputIdEdicao = document.getElementById('input-id-edicao'); 
         
         const inputInicio = document.getElementById('input-inicio');
         const inputFim = document.getElementById('input-fim');
@@ -166,46 +204,131 @@
         const btnDesfazer = document.getElementById('btn-desfazer');
         const btnRefazer = document.getElementById('btn-refazer');
         
-        // Estrutura do estado: {inicio: string, fim: string, texto: string}
-        let estadoInicial = {
-            inicio: '00:00:01,500', 
-            fim: '00:00:04,000', 
-            texto: 'Olá, bem-vindo ao nosso vídeo de hoje.'
-        };
+        // ==================================
+        // Estrutura de Dados e Histórico
+        // ==================================
+        // Estrutura de cada item: {id: number, inicio: string, fim: string, texto: string}
+        const legendasIniciais = [
+            { id: 1, inicio: '00:00:01,500', fim: '00:00:04,000', texto: 'Olá, bem-vindo ao nosso vídeo de hoje.' },
+            { id: 2, inicio: '00:00:04,500', fim: '00:00:06,000', texto: 'Vamos falar sobre um tema muito interessante.' },
+            { id: 3, inicio: '00:00:06,500', fim: '00:00:09,000', texto: 'Espero que você esteja preparado para aprender algo novo.' }
+        ];
 
-        // Histórico de estados para Desfazer/Refazer
-        let historico = [estadoInicial];
+        // O histórico armazena o ARRAY COMPLETO de legendas em cada estado
+        let historico = [legendasIniciais];
         let indiceHistorico = 0;
 
-        // --- Funções de Estado e Histórico ---
+
+        // ==================================
+        // Funções de Renderização e Carregamento
+        // ==================================
 
         /**
-         * Aplica um estado do histórico aos inputs e aos elementos de exibição.
-         * @param {Object} estado O objeto de estado a ser aplicado.
+         * Renderiza a lista de legendas na tela (HTML).
+         * @param {Array<Object>} legendas O array completo de legendas.
          */
-        function aplicarEstado(estado) {
-            // Atualiza os inputs
-            inputInicio.value = estado.inicio;
-            inputFim.value = estado.fim;
-            inputTexto.value = estado.texto;
+        function renderizarLista(legendas) {
+            listaLegendasDiv.innerHTML = ''; // Limpa a lista atual
+
+            const idAtivo = parseInt(inputIdEdicao.value);
+
+            legendas.forEach(legenda => {
+                const itemDiv = document.createElement('div');
+                itemDiv.setAttribute('data-id', legenda.id);
+                itemDiv.classList.add('legenda-item');
+                
+                // Define a classe 'ativa' se for o item em foco
+                if (legenda.id === idAtivo) {
+                    itemDiv.classList.add('legenda-ativa');
+                }
+
+                itemDiv.innerHTML = `
+                    <span class="legenda-id">${legenda.id}</span>
+                    <span class="timestamp">${legenda.inicio} --> ${legenda.fim}</span>
+                    <span class="legenda-texto">${legenda.texto}</span>
+                `;
+                
+                // Adiciona o evento de clique para carregar o item para edição
+                itemDiv.addEventListener('click', () => carregarLegendaParaEdicao(legenda.id, legendas));
+                
+                listaLegendasDiv.appendChild(itemDiv);
+            });
+        }
+
+        /**
+         * Carrega os dados de uma legenda específica para os inputs de edição.
+         * @param {number} id O ID da legenda a ser carregada.
+         * @param {Array<Object>} legendas O array de legendas a ser consultado.
+         */
+        function carregarLegendaParaEdicao(id, legendas) {
+            const legenda = legendas.find(l => l.id === id);
+            if (!legenda) return;
             
-            // Atualiza a exibição
-            displayTempo.textContent = `${estado.inicio} --> ${estado.fim}`;
-            displayTexto.textContent = estado.texto;
+            // Atualiza os inputs
+            inputIdEdicao.value = legenda.id; // Define o ID sendo editado
+            inputInicio.value = legenda.inicio;
+            inputFim.value = legenda.fim;
+            inputTexto.value = legenda.texto;
+            
+            // Atualiza a classe ativa na lista renderizada
+            document.querySelectorAll('.legenda-item').forEach(item => {
+                item.classList.remove('legenda-ativa');
+            });
+            const itemAtivo = document.querySelector(`[data-id="${id}"]`);
+            if (itemAtivo) {
+                itemAtivo.classList.add('legenda-ativa');
+            }
+
+            inputTexto.focus();
+        }
+
+        // ==================================
+        // Funções de Estado e Histórico (Desfazer/Refazer)
+        // ==================================
+
+        /**
+         * Aplica um estado do histórico (o array completo de legendas).
+         * @param {Array<Object>} novoHistorico O array completo de legendas a ser aplicado.
+         */
+        function aplicarEstado(novoHistorico) {
+            // 1. Renderiza a lista na tela
+            renderizarLista(novoHistorico);
+            
+            // 2. Tenta recarregar o item ativo para os inputs
+            const idAtivo = parseInt(inputIdEdicao.value);
+            if (idAtivo) {
+                carregarLegendaParaEdicao(idAtivo, novoHistorico);
+            } else if (novoHistorico.length > 0) {
+                // Se não houver ativo, carrega o primeiro
+                carregarLegendaParaEdicao(novoHistorico[0].id, novoHistorico);
+            }
             
             atualizarBotoes();
         }
-        
+
         /**
-         * Pega o estado atual dos inputs.
-         * @returns {Object} O objeto de estado atual.
+         * Pega o estado atual de edição (o array completo)
+         * @returns {Array<Object>} O array de legendas com o item editado atualizado.
          */
         function getEstadoAtual() {
-            return {
-                inicio: inputInicio.value.trim(),
-                fim: inputFim.value.trim(),
-                texto: inputTexto.value.trim()
-            };
+            // 1. Pega o estado completo do histórico atual (cria uma cópia profunda)
+            let estadoAtual = historico[indiceHistorico].map(item => ({...item}));
+            
+            const idAtivo = parseInt(inputIdEdicao.value);
+            
+            // 2. Se houver um item ativo, atualiza-o com os valores dos inputs
+            if (idAtivo) {
+                const index = estadoAtual.findIndex(l => l.id === idAtivo);
+                if (index !== -1) {
+                    estadoAtual[index] = {
+                        id: idAtivo,
+                        inicio: inputInicio.value.trim(),
+                        fim: inputFim.value.trim(),
+                        texto: inputTexto.value.trim()
+                    };
+                }
+            }
+            return estadoAtual;
         }
 
         /**
@@ -213,12 +336,10 @@
          */
         function salvarEstado() {
             const novoEstado = getEstadoAtual();
-            const ultimoEstado = historico[historico.length - 1];
+            const ultimoEstado = historico[indiceHistorico]; 
 
-            // Verifica se o estado mudou
-            if (novoEstado.inicio === ultimoEstado.inicio &&
-                novoEstado.fim === ultimoEstado.fim &&
-                novoEstado.texto === ultimoEstado.texto) {
+            // Converte para string e compara para saber se houve mudança (maneira fácil de comparar arrays de objetos)
+            if (JSON.stringify(novoEstado) === JSON.stringify(ultimoEstado)) {
                 return; // Não salva se nada mudou
             }
 
@@ -229,7 +350,9 @@
             historico.push(novoEstado);
             indiceHistorico = historico.length - 1;
 
-            // Atualiza o estado dos botões
+            // Renderiza a lista novamente para refletir as mudanças
+            renderizarLista(novoEstado); 
+
             atualizarBotoes();
         }
 
@@ -241,33 +364,28 @@
             btnRefazer.disabled = indiceHistorico >= historico.length - 1;
         }
 
-        // --- Event Listeners ---
 
-        // 1. Quando o usuário clica na legenda
-        legendaExibicao.addEventListener('click', () => {
-            // Pega o estado de exibição atual e coloca nos inputs
-            const estado = {
-                inicio: displayTempo.textContent.split(' --> ')[0],
-                fim: displayTempo.textContent.split(' --> ')[1],
-                texto: displayTexto.textContent
-            };
-            aplicarEstado(estado);
-            inputTexto.focus(); // Foca no campo de texto para começar a editar
-        });
-        
-        // 2. Evento de 'input' em qualquer campo (Atualização em tempo real da exibição)
+        // ==================================
+        // Event Listeners
+        // ==================================
+
+        // Eventos de 'input' e 'blur' para cada campo de edição
         inputs.forEach(input => {
             input.addEventListener('input', () => {
-                const estado = getEstadoAtual();
-                displayTempo.textContent = `${estado.inicio} --> ${estado.fim}`;
-                displayTexto.textContent = estado.texto;
+                // Atualiza a exibição em tempo real na lista
+                const idAtivo = parseInt(inputIdEdicao.value);
+                const itemDiv = document.querySelector(`[data-id="${idAtivo}"]`);
+                if (itemDiv) {
+                    itemDiv.querySelector('.timestamp').textContent = `${inputInicio.value.trim()} --> ${inputFim.value.trim()}`;
+                    itemDiv.querySelector('.legenda-texto').textContent = inputTexto.value.trim();
+                }
             });
             
-            // 3. Evento 'blur' em qualquer campo (Salva o estado após o usuário sair do campo)
+            // Salva o estado completo após o usuário sair do campo
             input.addEventListener('blur', salvarEstado);
         });
         
-        // 4. Botão Desfazer
+        // Botão Desfazer
         btnDesfazer.addEventListener('click', () => {
             if (indiceHistorico > 0) {
                 indiceHistorico--;
@@ -275,7 +393,7 @@
             }
         });
 
-        // 5. Botão Refazer
+        // Botão Refazer
         btnRefazer.addEventListener('click', () => {
             if (indiceHistorico < historico.length - 1) {
                 indiceHistorico++;
@@ -283,8 +401,19 @@
             }
         });
 
-        // Inicializa o estado dos inputs e botões
-        aplicarEstado(estadoInicial);
+
+        // ==================================
+        // Inicialização
+        // ==================================
+        
+        // Define o primeiro item como ativo para edição
+        if (legendasIniciais.length > 0) {
+            inputIdEdicao.value = legendasIniciais[0].id;
+        }
+
+        // Carrega o estado inicial e renderiza a página
+        aplicarEstado(legendasIniciais);
+        
     </script>
 </body>
 </html>
