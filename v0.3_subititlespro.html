@@ -1,606 +1,1002 @@
+<!-
+botoes '+' e '-' funcionando.
+->
 <!DOCTYPE html>
-<html lang="pt-br">
+<html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Editor de Legendas Profissional</title>
+    <title>SUBTITLE PRO - Editor de Legenda Multi-Trecho Dark</title>
     <style>
-        :root {
-            --background-color: #1a1a1a;
-            --container-bg: #242424;
-            --text-color: #e0e0e0;
-            --input-bg: #333333;
-            --border-color: #444444;
-            --primary-color: #007BFF; /* Azul */
-            --secondary-color: #6c757d; /* Cinza */
-            --active-color: var(--primary-color);
-            --active-bg: #2a3a4a;
-            --danger-color: #f44336; /* Vermelho */
-        }
-
+        /* ================================== */
+        /* CSS Básico e Tema Dark */
+        /* ================================== */
         body {
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-            background-color: var(--background-color);
-            color: var(--text-color);
-            margin: 0;
-            padding: 1.5rem;
+            font-family: Arial, sans-serif;
+            background-color: #1e1e1e;
+            color: #ffffff;
             display: flex;
             flex-direction: column;
-            gap: 1.5rem;
+            align-items: center;
+            gap: 10px;
         }
 
-        /*css da lista de legenda*/
-        .subtitle-item {
-            display: flex;           /* alinha os filhos na horizontal */
-            align-items: center;     /* centraliza verticalmente ícone e conteúdo */
-            gap: 0.5em;              /* espaço entre ícone e texto */
-            padding-left: 10px;
+        .hidden {
+          display: none !important;
+        }
+
+        section {
+            padding: 10px;
+            min-width: 350px; 
+            max-width: 600px;
+            border-radius: 8px;
+            background-color: #2d2d2d;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
         }
         
-        .play-icon {
-            flex-shrink: 0;          /* evita que o ícone encolha */
-            font-size: 1.2em;
-            color: var(--primary-color);
-            user-select: none;
-        }
-        
-        .subtitle-content {
+        /* ================================== */
+        /* Estilo para a Load e Save */
+        /* ================================== */
+		.load-group {
+            /* Define o contêiner como um layout flexível */
             display: flex;
-            flex-direction: column;  /* empilha o tempo e texto verticalmente */
+            /* Altera a direção principal de linha (padrão) para coluna (um acima do outro) */
+            flex-direction: column;
+            /* Adiciona um pequeno espaçamento vertical entre os itens internos */
+            gap: 8px; /* Você pode ajustar este valor */
+            /* Garante que o grupo ocupe toda a largura disponível no seu contêiner pai */
+            width: 100%;
         }
         
-        .subtitle-time {
-            font-weight: bold;
-            font-size: 0.9em;
+        /* ================================== */
+        /* Estilo para a Lista de Legendas */
+        /* ================================== */
+        #lista-legendas {
+            max-height: 50vh; /* ou a altura que preferir */
+            overflow-y: auto;
+            width: 100%;
         }
         
-        .subtitle-text {
-            font-size: 0.85em;
+        .legenda-item {
+            cursor: pointer;
+            padding: 4px 8px;
+            border-radius: 4px;
+            transition: background-color 0.15s;
+            display: flex;
+            gap: 15px;
+            align-items: baseline;
+            line-height: 1.4;
         }
 
+        .legenda-item:hover {
+            background-color: #3a3a3a;
+        }
+
+        /* Marcação para o item que está atualmente sendo editado */
+        .legenda-item.legenda-ativa {
+            background-color: #5c7cfa; /* Fundo azul para o item ativo */
+            color: #1e1e1e;
+            font-weight: bold;
+        }
+
+        .legenda-item.legenda-ativa .timestamp,
+        .legenda-item.legenda-ativa .legenda-id {
+            color: #1e1e1e; 
+        }
+
+        .legenda-id {
+            font-weight: bold;
+            color: #999999;
+            width: 20px; /* Largura para o número */
+            flex-shrink: 0;
+        }
+        
+        .timestamp {
+            font-weight: bold;
+            color: #5c7cfa;
+            width: 100px; /* Largura para o tempo */
+            flex-shrink: 0;
+        }
+
+        .legenda-texto {
+            flex-grow: 1;
+        }
+
+        /* ================================== */
+        /* Estilo para a Área de Edição */
+        /* ================================== */
+        #area-edicao {
+            position: sticky;
+            top: 0;
+            background-color: #2d2d2d;
+            z-index: 10;
+            padding: 0;
+        }
+
+        .input-group {
+            display: flex;
+            margin: 10px;
+            gap: 10px;
+            align-items: center;
+        }
+
+        .input-group label {
+            width: 50px; 
+            flex-shrink: 0;
+            font-weight: bold;
+        }
+
+        .input-campo {
+            padding: 10px;
+            border: 1px solid #4a4a4a;
+            border-radius: 4px;
+            font-size: 1em;
+            background-color: #3a3a3a;
+            color: #ffffff;
+            box-sizing: border-box;
+            flex-grow: 1; 
+        }
+
+        #input-inicio, #input-fim {
+            width: 125px;
+            flex-grow: 0;
+        }
+
+        #input-texto {
+            min-height: 75px;
+            /* Use 'normal' ou 'pre-wrap' (melhor para textos longos) */
+            white-space: normal; 
+            /* Garante que não haja barra de rolagem horizontal desnecessária */
+            overflow-x: hidden; 
+        }
+
+        /* Estilo para os botões */
+        .botoes-time {
+            display: flex; /* Transforma o botão em um container flex */
+            align-items: center; /* Alinha o conteúdo verticalmente ao centro */
+            justify-content: center; /* Alinha o conteúdo horizontalmente ao centro */
+            width: 25px;
+            height: 45px;            
+        }
+        
+        .botoes-container {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 7px;
+            margin: 10px auto 0;
+        }
+
+        button {
+            padding: 3px 6px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: background-color 0.2s;
+            flex-basis: calc(20% - 7.5px); /*  */
+        }
+
+        #btn-desfazer, #btn-refazer {
+            background-color: #f7931e;
+            color: #1e1e1e;
+        }
+
+        #btn-desfazer:hover, #btn-refazer:hover  {
+            background-color: #e6861a;
+        }
+
+        #btn-prev, #btn-play, #btn-next, #btn-linha\+, #btn-linha\- {
+            background-color: #5c7cfa;
+            color: #ffffff;
+        }
+
+        #btn-prev:hover, #btn-play:hover, #btn-next:hover, #btn-linha\+:hover, #btn-linha\-:hover {
+            background-color: #4a67e6;
+        }
     </style>
 </head>
 <body>
 
-    <div class="main-container">
-        <h1>Editor de Legendas Profissional</h1>
-
-        <div class="top-bar">
-            <div class="input-group">
-                <input type="text" id="videoUrl" placeholder="Cole a URL do vídeo ou faça o upload">
-                <label for="videoUpload" class="upload-btn">Upload Vídeo</label>
-                <input type="file" id="videoUpload" accept="video/*">
-            </div>
-            <div class="input-group">
-                <input type="text" id="srtUrl" placeholder="Cole a URL da legenda (.srt) ou faça o upload">
-                <label for="srtUpload" class="upload-btn">Upload .SRT</label>
-                <input type="file" id="srtUpload" accept=".srt">
-            </div>
-            <div class="controls-group">
-                <div class="input-group" style="flex-grow: 1;">
-                    <label for="step-increment">Incremento (s):</label>
-                    <input type="number" id="step-increment" value="0.1" step="0.05" style="max-width: 120px;">
-                </div>
-                <div class="action-buttons">
-                    <button id="loadButton">Carregar Mídia</button>
-                    <button id="batchEditButton">Edição em Lote</button>
-                    <button id="exportButton">Exportar .SRT</button>
-                </div>
-            </div>
-            <p id="error-message"></p>
+    <section id="load-area">
+        <p>Abrir</p>
+        <div class="load-group">
+            <label for="videoUpload" class="upload-btn">Upload Vídeo</label>
+            <input type="text" id="videoUrl" placeholder="Cole a URL do vídeo ou faça o upload">
+            <input type="file" id="videoUpload" accept="video/*">
         </div>
-
-        <div class="editor-layout">
-            <div class="left-panel">
-                <div class="video-container"><video id="video-player" controls></video></div>
-                <div class="editor-panel">
-                    <div class="subtitle-list-controls" style="margin-bottom: 1rem;">
-                        <button id="addSegmentBtn">+ Adicionar Segmento</button>
-                        <button id="removeSegmentBtn">- Remover Segmento</button>
-                    </div>
-                    <div class="time-control-group">
-                        <label for="edit-start">Início</label>
-                        <div class="time-input-wrapper">
-                            <input type="text" id="edit-start">
-                            <div class="time-adjust-stack">
-                                <div class="time-adjust-stack">
-                                    <button class="time-adjust-btn" data-target="edit-start" data-direction="1">+</button>
-                                    <button class="time-adjust-btn" data-target="edit-start" data-direction="-1">-</button>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="time-control-group">
-                        <label for="edit-end">Fim</label>
-                        <div class="time-input-wrapper"><input type="text" id="edit-end"></div>
-                    </div>
-                    <div class="time-control-group">
-                        <label for="edit-duration">Duração (s)</label>
-                        <div class="time-input-wrapper">
-                             <input type="text" id="edit-duration">
-                             <div class="time-adjust-stack">
-                                <button class="time-adjust-btn" data-target="edit-duration" data-direction="1">+</button>
-                                <button class="time-adjust-btn" data-target="edit-duration" data-direction="-1">-</button>
-                            </div>
-                        </div>
-                    </div>
-                    <textarea id="edit-text" placeholder="Selecione uma legenda para editar..."></textarea>
-                </div>
-                <div class="editor-actions">
-                    <label for="edit-repeat">Repetir Trecho</label>
-                    <div class=""><input type="text" id="repeatSegmentInput"></div>
-                    <div class="time-adjust-stack">
-                        <button class="repeat-adjust-btn" data-target="repeatSegmentInput" data-direction="1">+</button>
-						<button class="repeat-adjust-btn" data-target="repeatSegmentInput" data-direction="-1">-</button>
-
-                    </div>
-                    <button id="playSegmentButton">▶ Tocar Trecho</button>
-                </div>
-                <div class="">
-                    <button id="undoBtn" disabled>Desfazer</button>
-                    <button id="redoBtn" disabled>Refazer</button>
-                </div>
-            </div>
-            <div class="right-panel">
-                <h2>Legendas</h2>
-                <div id="subtitle-list"></div>
-            </div>
-
+        <div class="load-group">
+        	<label for="srtUpload" class="upload-btn">Upload SRT</label>
+        	<input type="text" id="srtUrl" placeholder="Cole a URL da legenda (.srt) ou faça o upload">
+        	<input type="file" id="srtUpload" accept=".srt">
         </div>
-    </div>
+    </section>
+
+    <section id="save-area" class="hidden">
+        <p>Salvar</p>
+        <div id="">
+        </div>
+    </section>
     
-    <div id="batchEditModal" class="modal">
-        <div class="modal-content">
-            <span class="close-btn" id="closeModalBtn" style="float: right; font-size: 1.5rem; cursor: pointer;">&times;</span>
-            <h3>Edição em Lote</h3>
-            <div class="modal-form-group">
-                <label for="time-shift">Deslocamento de tempo (em segundos):</label>
-                <input type="number" id="time-shift" step="0.001" placeholder="Ex: +1.5 ou -0.5">
-            </div>
-            <div class="modal-form-group">
-                <label for="apply-scope">Aplicar a:</label>
-                <select id="apply-scope" style="width: 100%; padding: 0.75rem; box-sizing: border-box;">
-                    <option value="all">Todas as legendas</option>
-                    <option value="from_selected">A partir da legenda selecionada</option>
-                </select>
-            </div>
-            <button id="apply-shift-btn" style="background-color: var(--primary-color); padding: 0.75rem 1.5rem; border: none; color: white; border-radius: 4px; font-size: 1rem;">Aplicar</button>
-        </div>
-    </div>
+    <section>
+        <p>Área de Edição</p>
+        <div id="area-edicao">
+            
+            <input type="hidden" id="input-id-edicao">
 
-<script>
-// state.js
-class State {
-    constructor() {
-        this.videoUrl = '';
-        this.srtUrl = '';
-        this.stepIncrement = 0.1;
-        this.subtitles = [];
-        this.currentSubtitleIndex = null;
-        this.history = [];
-        this.currentHistoryIndex = -1;
-        document.getElementById('undoBtn').disabled = true;
-        document.getElementById('redoBtn').disabled = true;
+            <div class="input-group">
+                <label for="input-inicio">Início:</label>
+                <input type="text" id="input-inicio" class="input-campo" placeholder="Ex: 00:00:01,500">
+                <button id="btn-inicio+" class="botoes-time">➕️</button>
+                <button id="btn-inicio-" class="botoes-time">➖</button>
+                <button id="btn-desfazer" class="botoes-time" disabled>↩️</button>
+                <button id="btn-refazer" class="botoes-time" disabled>↪️</button>
+            </div>
+
+            <div class="input-group">
+                <label for="input-fim">Fim:</label>
+                <input type="text" id="input-fim" class="input-campo" placeholder="Ex: 00:00:04,000">
+                <button id="btn-fim+" class="botoes-time">➕️</button>
+                <button id="btn-fim-" class="botoes-time">➖</button>
+                <button id="btn-linha+" class="botoes-time" disabled>☰ ➕️</button>
+                <button id="btn-linha-" class="botoes-time" disabled>☰ ➖</button>
+            </div>
+
+			<div class="input-group">
+                <label for="input-texto">Texto:</label>
+                <textarea id="input-texto" class="input-campo" placeholder="Texto da legenda para edição"></textarea>
+            </div>
+            
+            <div class="botoes-container">
+                <button id="btn-load" onclick="showLoadArea()">📂</button>
+                <button id="btn-prev" disabled>◀◀</button>
+                <button id="btn-play" disabled>▶</button>
+                <button id="btn-next" disabled>▶▶ </button>
+                <button id="btn-save" onclick="showSaveArea()">💾</button>
+            </div>
+        </div>
+    </section>
+
+    <section>
+        <p>Lista de Legendas (Clique em qualquer linha para editar)</p>
+        <div id="lista-legendas">
+            </div>
+    </section>
+
+    <script>
+    // ==================================
+    // Elementos do DOM
+    // ==================================
+    const listaLegendasDiv = document.getElementById('lista-legendas'); 
+    const inputIdEdicao = document.getElementById('input-id-edicao'); 
+    
+    const inputInicio = document.getElementById('input-inicio');
+    const inputFim = document.getElementById('input-fim');
+    const inputTexto = document.getElementById('input-texto');
+    const inputs = [inputInicio, inputFim, inputTexto];
+
+    const btnDesfazer = document.getElementById('btn-desfazer');
+    const btnRefazer = document.getElementById('btn-refazer');
+    const btnLinhaAdicionar = document.getElementById('btn-linha+');
+    const btnLinhaRemover = document.getElementById('btn-linha-');
+    const btnPrevLinha = document.getElementById('btn-prev'); 
+    const btnNextLinha = document.getElementById('btn-next');
+
+    const btnInicioMais = document.getElementById('btn-inicio+');
+    const btnInicioMenos = document.getElementById('btn-inicio-');
+    const btnFimMais = document.getElementById('btn-fim+');
+    const btnFimMenos = document.getElementById('btn-fim-');
+    
+    // ==================================
+    // Estrutura de Dados e Histórico
+    // ==================================
+    // Estrutura de cada item: {id: number, inicio: string, fim: string, texto: string}
+    const legendasIniciais = [
+        { id: 1, inicio: '00:00:01,500', fim: '00:00:04,000', texto: 'Olá, bem-vindo ao nosso vídeo de hoje.' },
+        { id: 2, inicio: '00:00:04,500', fim: '00:00:06,000', texto: 'Vamos falar sobre um tema muito interessante.' },
+        { id: 3, inicio: '00:00:06,500', fim: '00:00:09,000', texto: 'Espero que você esteja preparado para aprender algo novo.' },
+        { id: 4, inicio: '00:00:09,500', fim: '00:00:10,000', texto: 'Espero que você esteja preparado para aprender algo novo.' },
+        { id: 5, inicio: '00:00:10,500', fim: '00:00:12,000', texto: 'Espero que você esteja preparado para aprender algo novo.' }
+    ];
+
+    // Estrutura de Dados e Histórico
+    // Agora o histórico armazena um objeto com as legendas E o ID ativo
+    let historico = [{ legendas: legendasIniciais, idAtivo: legendasIniciais[0].id }];
+    let indiceHistorico = 0;
+    
+    // ==================================
+    // --- Funções de Navegação (Views) ---
+    // ==================================
+    function showLoadArea() {
+    document.getElementById('load-area').classList.remove('hidden');
+    document.getElementById('save-area').classList.add('hidden');
+    }
+
+    function showSaveArea() {
+        document.getElementById('save-area').classList.remove('hidden');
+        document.getElementById('load-area').classList.add('hidden');
+    }
+
+	function closeLoadSaveArea() {
+        document.getElementById('load-area').classList.add('hidden');
+        document.getElementById('save-area').classList.add('hidden');
+	}
+
+// Para usar, basta chamar:
+// toggleLoadSaveArea();
+
+    // ==================================
+    // Funções de Renderização e Carregamento
+    // ==================================
+
+    /**
+     * Renderiza a lista de legendas na tela (HTML).
+     * @param {Array<Object>} legendas O array completo de legendas.
+     */
+    function renderizarLista(legendas) {
+        listaLegendasDiv.innerHTML = ''; // Limpa a lista atual
+
+        const idAtivo = parseInt(inputIdEdicao.value);
+
+        legendas.forEach(legenda => {
+            const itemDiv = document.createElement('div');
+            itemDiv.setAttribute('data-id', legenda.id);
+            itemDiv.classList.add('legenda-item');
+            
+            // Define a classe 'ativa' se for o item em foco
+            if (legenda.id === idAtivo) {
+                itemDiv.classList.add('legenda-ativa');
+            }
+
+            itemDiv.innerHTML = `
+                <span class="legenda-id">${legenda.id}</span>
+                <span class="timestamp">${legenda.inicio} --> ${legenda.fim}</span>
+                <span class="legenda-texto">${legenda.texto}</span>
+            `;
+            
+            // Adiciona o evento de clique para carregar o item para edição
+            itemDiv.addEventListener('click', () => carregarLegendaParaEdicao(legenda.id, legendas));
+            
+            listaLegendasDiv.appendChild(itemDiv);
+        });
     }
 
     /**
-     * Salva o estado atual das legendas no histórico.
-     * @param {number|null} [activeId=null] O ID da legenda que está ativa.
+     * Carrega os dados de uma legenda específica para os inputs de edição.
+     * @param {number} id O ID da legenda a ser carregada.
+     * @param {Array<Object>} legendas O array de legendas a ser consultado.
      */
-    updateHistory(activeId = null) {
-        this.history = this.history.slice(0, this.currentHistoryIndex + 1);
-        this.history.push({ state: JSON.parse(JSON.stringify(this.subtitles)), activeId });
-        this.currentHistoryIndex++;
-        this.updateButtonStates();
+    function carregarLegendaParaEdicao(id, legendas) {
+        const legenda = legendas.find(l => l.id === id);
+        if (!legenda) return;
+        
+        // Atualiza os inputs (ISSO FAZ O TEXTO APARECER)
+        inputIdEdicao.value = legenda.id; // Define o ID sendo editado
+        inputInicio.value = legenda.inicio;
+        inputFim.value = legenda.fim;
+        inputTexto.value = legenda.texto; // <--- AQUI O TEXTO É DEFINIDO
+        
+        // CORREÇÃO: REMOVA ESTE TRECHO
+        // Force a re-renderização/atualização da lista após carregar os inputs
+        // renderizarLista(legendas); // <--- REMOVA ESTA LINHA!
+
+        // Atualiza a classe ativa na lista renderizada
+        document.querySelectorAll('.legenda-item').forEach(item => {
+            item.classList.remove('legenda-ativa');
+        });
+        const itemAtivo = document.querySelector(`[data-id="${id}"]`);
+        if (itemAtivo) {
+            itemAtivo.classList.add('legenda-ativa');
+        }
+        
+        atualizarBotoes(); // Garante que os botões de navegação e linha estejam atualizados
+        inputTexto.focus();
+    }
+
+    // ==================================
+    // Funções de Estado e Histórico (Desfazer/Refazer)
+    // ==================================
+
+    /**
+     * Aplica um estado do histórico (o array completo de legendas).
+     * @param {Object} estadoHistorico O objeto completo {legendas: Array, idAtivo: number}.
+     */
+    function aplicarEstado(estadoHistorico) {
+        const { legendas, idAtivo } = estadoHistorico;
+
+        // 1. Renderiza a lista na tela
+        renderizarLista(legendas);
+
+        // 2. Carrega o item que estava ativo quando este estado foi salvo
+        // Isso garante que, ao Desfazer/Refazer, a área de edição mostre a linha alterada.
+        if (idAtivo && legendas.find(l => l.id === idAtivo)) {
+            // Nota: carregarLegendaParaEdicao chama renderizarLista e atualizarBotoes internamente.
+            carregarLegendaParaEdicao(idAtivo, legendas);
+        } else if (legendas.length > 0) {
+            carregarLegendaParaEdicao(legendas[0].id, legendas);
+        }
+
+        atualizarBotoes();
+    }
+
+    /**
+     * Pega o estado atual de edição (o array completo)
+     * @returns {Array<Object>} O array de legendas com o item editado atualizado.
+     */
+    function getEstadoAtual() {
+        // Pega o estado atual do histórico e faz uma cópia profunda (map)
+        let estadoAtual = historico[indiceHistorico].legendas.map(item => ({...item}));
+
+        const idAtivo = parseInt(inputIdEdicao.value);
+
+        if (idAtivo) {
+            const index = estadoAtual.findIndex(l => l.id === idAtivo);
+            if (index !== -1) {
+                estadoAtual[index] = {
+                    id: idAtivo,
+                    inicio: inputInicio.value.trim(),
+                    fim: inputFim.value.trim(),
+                    texto: inputTexto.value.trim()
+                };
+            }
+        }
+        return estadoAtual;
+    }
+
+    /**
+     * Adiciona o estado atual ao histórico.
+     */
+    function salvarEstado() {
+        const novoEstado = getEstadoAtual();
+        const idAtivo = parseInt(inputIdEdicao.value);
+        const ultimoEstado = historico[indiceHistorico]; 
+
+        // Compara apenas as legendas para evitar salvar se só mudou o ID ativo (seleção)
+        if (JSON.stringify(novoEstado) === JSON.stringify(ultimoEstado.legendas)) {
+            return;
+        }
+
+        historico = historico.slice(0, indiceHistorico + 1);
+
+        // Adiciona o novo estado com as legendas E o ID ativo
+        historico.push({ legendas: novoEstado, idAtivo: idAtivo });
+        indiceHistorico = historico.length - 1;
+
+        renderizarLista(novoEstado); 
+
+        atualizarBotoes();
+    }
+
+    /**
+     * Atualiza os atributos 'disabled' dos botões Desfazer e Refazer.
+     */
+    function atualizarBotoes() {
+        btnDesfazer.disabled = indiceHistorico <= 0;
+        btnRefazer.disabled = indiceHistorico >= historico.length - 1;
+
+        // Habilita Linha + se houver uma linha selecionada
+        const idAtivo = parseInt(inputIdEdicao.value);
+        btnLinhaAdicionar.disabled = !idAtivo;
+
+        // Habilita Linha - se houver mais de uma linha
+        const estadoAtual = historico[indiceHistorico].legendas;
+        btnLinhaRemover.disabled = !idAtivo || estadoAtual.length <= 1;
+
+        // Habilita/desabilita botões de navegação
+        const indexAtual = estadoAtual.findIndex(l => l.id === idAtivo);
+        // btnPrevLinha (Anterior)
+        btnPrevLinha.disabled = !idAtivo || indexAtual <= 0;
+        // btnNextLinha (Próximo)
+        btnNextLinha.disabled = !idAtivo || indexAtual >= estadoAtual.length - 1;
     }
     
+    // ==================================
+    // Validação e Formatação de Timestamps
+    // ==================================
+
     /**
-     * Reverte o estado para a entrada anterior no histórico.
+     * Permite apenas números e navegação durante a digitação
      */
-    undo() {
-        if (this.currentHistoryIndex > 0) {
-            this.currentHistoryIndex--;
-            const prevState = this.history[this.currentHistoryIndex];
-            this.subtitles = JSON.parse(JSON.stringify(prevState.state));
-            this.currentSubtitleIndex = this.subtitles.findIndex(sub => sub.id === prevState.activeId);
-            this.updateButtonStates();
+    function permitirApenasNumerosTimestamp(e) {
+        const tecla = e.key;
+
+        // Permite: números, Backspace, Delete, Tab, Escape, Enter, setas, Home, End
+        if (
+            /^\d$/.test(tecla) || // Números
+            tecla === 'Backspace' ||
+            tecla === 'Delete' ||
+            tecla === 'Tab' ||
+            tecla === 'Escape' ||
+            tecla === 'Enter' ||
+            tecla === 'ArrowLeft' ||
+            tecla === 'ArrowRight' ||
+            tecla === 'ArrowUp' ||
+            tecla === 'ArrowDown' ||
+            tecla === 'Home' ||
+            tecla === 'End' ||
+            (e.ctrlKey && (tecla === 'a' || tecla === 'c' || tecla === 'v' || tecla === 'x' || tecla === 'z')) // Ctrl+A, C, V, X, Z
+        ) {
+            return; // Permite
         }
-    }
 
-    /**
-     * Avança o estado para a próxima entrada no histórico.
-     */
-    redo() {
-        if (this.currentHistoryIndex < this.history.length - 1) {
-            this.currentHistoryIndex++;
-            const nextState = this.history[this.currentHistoryIndex];
-            this.subtitles = JSON.parse(JSON.stringify(nextState.state));
-            this.currentSubtitleIndex = this.subtitles.findIndex(sub => sub.id === nextState.activeId);
-            this.updateButtonStates();
+        // Bloqueia vírgula, dois pontos e outras teclas
+        if (tecla === ',' || tecla === ':') {
+            e.preventDefault();
+            return;
         }
+
+        e.preventDefault(); // Bloqueia outras teclas
     }
 
     /**
-     * Atualiza o estado dos botões Desfazer/Refazer com base no histórico.
+     * Formata o timestamp mantendo a estrutura HH:MM:SS,mmm
      */
-    updateButtonStates() {
-        const undoBtn = document.getElementById('undoBtn');
-        const redoBtn = document.getElementById('redoBtn');
+    function formatarTimestampInput(input) {
+        const cursorPos = input.selectionStart;
+        let valor = input.value;
 
-        undoBtn.disabled = this.currentHistoryIndex <= 0;
-        redoBtn.disabled = this.currentHistoryIndex >= this.history.length - 1;
-    }
-}
+        // Extrai apenas os números
+        const numeros = valor.replace(/\D/g, '');
 
-// input-manager.js
-class InputManager {
-    constructor(state) {
-        this.state = state;
-        this.bindEvents();
-    }
-
-    /**
-     * Associa os eventos de clique e input a suas respectivas ações.
-     */
-    bindEvents() {
-        // Eventos para os botões de Desfazer/Refazer
-        document.getElementById('undoBtn').addEventListener('click', () => {
-            this.state.undo();
-            refreshUIFromState(this.state);
-        });
-
-        document.getElementById('redoBtn').addEventListener('click', () => {
-            this.state.redo();
-            refreshUIFromState(this.state);
-        });
-
-        // Eventos para os inputs de edição de legenda
-        const inputsToMonitor = ['edit-start', 'edit-end', 'edit-duration', 'edit-text'];
-        inputsToMonitor.forEach(id => {
-            const input = document.getElementById(id);
-            if (input) {
-                input.addEventListener('input', () => {
-                    const selectedItem = document.querySelector('#subtitle-list .subtitle-item.selected');
-                    if (!selectedItem) return;
-                    const subtitleId = parseInt(selectedItem.dataset.id, 10);
-                    const subtitleIndex = this.state.subtitles.findIndex(sub => sub.id === subtitleId);
-                    if (subtitleIndex === -1) return;
-
-                    // A função `updateActiveSubtitleData` irá manipular o estado e salvar o histórico.
-                    updateActiveSubtitleData(this.state);
-                });
-            }
-        });
-    }
-}
-
-// init.js
-function init() {
-    const state = new State();
-    const inputManager = new InputManager(state);
-
-    // Conectar eventos do DOM aos manipuladores
-    const videoUploadInput = document.getElementById('videoUpload');
-    const srtUploadInput = document.getElementById('srtUpload');
-    if (videoUploadInput) {
-        videoUploadInput.addEventListener('change', (event) => handleFileUpload(event, 'video', state));
-    }
-    if (srtUploadInput) {
-        srtUploadInput.addEventListener('change', (event) => handleFileUpload(event, 'srt', state));
-    }
-    document.getElementById('loadButton').addEventListener('click', () => handleLoadMedia(state));
-    document.getElementById('addSegmentBtn').addEventListener('click', () => addSegment(state));
-    document.getElementById('removeSegmentBtn').addEventListener('click', () => removeSegment(state));
-
-    // Inicializar os controles de tempo, botões de segmento, etc.
-    initEditorControls(state);
-    initSubtitleList(state);
-    initTextEditListener(state);
-    initRepeatSegmentControls();
-}
-
-//=========================================================
-// OUTRAS FUNÇÕES (coloque aqui todas as outras funções que você enviou)
-//=========================================================
-
-// Fx de carregamento
-function handleFileUpload(event, type, state) {
-    const file = event.target.files[0];
-    const errorMessageElement = document.getElementById('error-message');
-    errorMessageElement.textContent = '';
-    if (!file) return;
-    if (type === 'video') {
-        loadVideoPlayer(file);
-    } else if (type === 'srt') {
-        loadSrtFile(file, state);
-    }
-}
-
-function loadVideoPlayer(videoFile) {
-    const videoPlayer = document.getElementById('video-player');
-    const errorMessageElement = document.getElementById('error-message');
-    if (!videoFile.type.startsWith('video/')) {
-        errorMessageElement.textContent = 'Erro: O arquivo selecionado não é um vídeo válido.';
-        return;
-    }
-    const videoURL = URL.createObjectURL(videoFile);
-    videoPlayer.src = videoURL;
-}
-
-function loadSrtFile(srtFile, state) {
-    const reader = new FileReader();
-    const errorMessageElement = document.getElementById('error-message');
-    reader.onload = (event) => {
-        try {
-            const srtContent = event.target.result;
-            state.subtitles = parseSrt(srtContent);
-            displaySubtitles(state.subtitles);
-            state.updateHistory(); // Salva o estado inicial
-        } catch (error) {
-            errorMessageElement.textContent = 'Erro ao processar o arquivo .srt. Verifique o formato.';
-            console.error("SRT Parsing Error:", error);
+        // Se não tiver números suficientes, não formata ainda
+        if (numeros.length === 0) {
+            input.value = '';
+            return;
         }
-    };
-    reader.onerror = () => {
-        errorMessageElement.textContent = 'Não foi possível ler o arquivo de legenda.';
-    };
-    reader.readAsText(srtFile);
-}
 
-function parseSrt(srtContent) {
-    const blocks = srtContent.trim().replace(/\r/g, '').split('\n\n');
-    const subtitles = blocks.map((block, index) => {
-        const lines = block.split('\n');
-        const timeLineIndex = lines.findIndex(line => line.includes('-->'));
-        if (timeLineIndex === -1) return null;
-        const timeMatch = lines[timeLineIndex].match(/(\d{2}:\d{2}:\d{2},\d{3})\s*-->\s*(\d{2}:\d{2}:\d{2},\d{3})/);
-        if (!timeMatch) return null;
-        const id = index + 1;
-        const startTime = timeMatch[1];
-        const endTime = timeMatch[2];
-        const text = lines.slice(timeLineIndex + 1).join('\n');
-        return { id, startTime, endTime, text };
-    }).filter(Boolean);
-    return subtitles;
-}
+        // Preenche com zeros à esquerda até ter 7 dígitos
+        const preenchido = numeros.padStart(7, '0').slice(0, 7);
 
-function displaySubtitles(subtitles) {
-    const listContainer = document.getElementById('subtitle-list');
-    listContainer.innerHTML = '';
-    if (subtitles.length === 0) {
-        listContainer.innerHTML = '<p>Nenhuma legenda encontrada no arquivo.</p>';
-        return;
+        // Formata: HH:MM:SS,mmm
+        const horas = preenchido.slice(0, 2);
+        const minutos = preenchido.slice(2, 4);
+        const segundos = preenchido.slice(4, 6);
+        const milissegundos = preenchido.slice(6, 7) + '00';
+
+        const novoValor = `${horas}:${minutos}:${segundos},${milissegundos}`;
+        input.value = novoValor;
+
+        // Calcula nova posição do cursor
+        // Conta quantos separadores (:, ) existem antes da posição do cursor
+        let novaPosicao = cursorPos;
+        const valorAnterior = valor.slice(0, cursorPos);
+        const numerosAntes = valorAnterior.replace(/\D/g, '').length;
+
+        // Ajusta posição baseado em onde está no formato HH:MM:SS,mmm
+        if (numerosAntes <= 2) {
+            novaPosicao = numerosAntes; // HH
+        } else if (numerosAntes <= 4) {
+            novaPosicao = numerosAntes + 1; // HH:MM
+        } else if (numerosAntes <= 6) {
+            novaPosicao = numerosAntes + 2; // HH:MM:SS
+        } else {
+            novaPosicao = numerosAntes + 3; // HH:MM:SS,mmm
+        }
+
+        input.setSelectionRange(novaPosicao, novaPosicao);
     }
-    const fragment = document.createDocumentFragment();
-    subtitles.forEach(sub => {
-        const subItem = document.createElement('div');
-        subItem.className = 'subtitle-item';
-        subItem.dataset.id = sub.id;
-        subItem.innerHTML = `<div class="subtitle-content"><div class="subtitle-time">${sub.startTime} --> ${sub.endTime}</div><div class="subtitle-text">${sub.text.replace(/\n/g, '<br>')}</div></div>`;
-        fragment.appendChild(subItem);
+
+    // Adiciona validação aos inputs de tempo
+    inputInicio.addEventListener('keydown', permitirApenasNumerosTimestamp);
+    inputFim.addEventListener('keydown', permitirApenasNumerosTimestamp);
+
+    // Formata em tempo real durante a digitação
+    inputInicio.addEventListener('input', function() {
+        formatarTimestampInput(this);
     });
-    listContainer.appendChild(fragment);
-}
 
-function handleLoadMedia(state) {
-    const videoUrl = document.getElementById('videoUrl').value.trim();
-    const srtUrl = document.getElementById('srtUrl').value.trim();
-    const videoInput = document.getElementById('videoUpload');
-    const srtInput = document.getElementById('srtUpload');
-    if (videoInput && videoInput.files.length > 0) {
-        loadVideoPlayer(videoInput.files[0]);
-    } else if (videoUrl) {
-        loadVideoFromUrl(videoUrl);
-    }
-    if (srtInput && srtInput.files.length > 0) {
-        loadSrtFile(srtInput.files[0], state);
-    } else if (srtUrl) {
-        loadSrtFromUrl(srtUrl, state);
-    }
-}
-
-function isValidUrl(str) {
-    try { new URL(str); return true; } catch { return false; }
-}
-
-async function loadSrtFromUrl(url, state) {
-    const errorMessageElement = document.getElementById('error-message');
-    errorMessageElement.textContent = '';
-    if (!isValidUrl(url)) {
-        errorMessageElement.textContent = 'URL de legenda inválida.';
-        return;
-    }
-    try {
-        const response = await fetch(url);
-        if (!response.ok) throw new Error('Erro ao baixar o arquivo SRT.');
-        const srtContent = await response.text();
-        state.subtitles = parseSrt(srtContent);
-        displaySubtitles(state.subtitles);
-        state.updateHistory(); // Salva o estado inicial
-    } catch (error) {
-        errorMessageElement.textContent = 'Falha ao carregar o arquivo .srt da URL.';
-        console.error(error);
-    }
-}
-
-// Bloco de fx editar texto
-function initTextEditListener(state) {
-    const textInput = document.getElementById('edit-text');
-    if (!textInput) return;
-    textInput.addEventListener('input', () => {
-        const selectedItem = document.querySelector('#subtitle-list .subtitle-item.selected');
-        if (!selectedItem) return;
-        const textDisplay = selectedItem.querySelector('.subtitle-text');
-        if (textDisplay) {
-            textDisplay.innerHTML = textInput.value.replace(/\n/g, '<br>');
-        }
-        updateActiveSubtitleData(state);
+    inputFim.addEventListener('input', function() {
+        formatarTimestampInput(this);
     });
-}
 
-function updateActiveSubtitleData(state) {
-    const selectedItem = document.querySelector('#subtitle-list .subtitle-item.selected');
-    if (!selectedItem) return;
-    const subtitleId = parseInt(selectedItem.dataset.id, 10);
-    const subtitleObject = state.subtitles.find(sub => sub.id === subtitleId);
-    if (!subtitleObject) return;
-    const newStartTime = document.getElementById('edit-start').value;
-    const newEndTime = document.getElementById('edit-end').value;
-    const newText = document.getElementById('edit-text').value;
-    subtitleObject.startTime = newStartTime;
-    subtitleObject.endTime = newEndTime;
-    subtitleObject.text = newText;
-    state.updateHistory(subtitleId);
-}
+    // Blur para os inputs de tempo
+    inputInicio.addEventListener('blur', salvarEstado);
+    inputFim.addEventListener('blur', salvarEstado);
+    
+    // ==================================
+    // Funções de Ajuste de Tempo
+    // ==================================
 
-function refreshUIFromState(state) {
-    displaySubtitles(state.subtitles);
-    if (state.currentSubtitleIndex !== null) {
-        const subtitle = state.subtitles[state.currentSubtitleIndex];
-        if (subtitle) {
-            populateEditor(subtitle);
-            const selectedItem = document.querySelector(`[data-id="${subtitle.id}"]`);
-            if (selectedItem) {
-                updateSelectionVisuals(selectedItem);
+    /**
+     * Converte timestamp para milissegundos
+     */
+    function timestampParaMs(timestamp) {
+        const partes = timestamp.split(':');
+        const horas = parseInt(partes[0]);
+        const minutos = parseInt(partes[1]);
+        const segundosParte = partes[2].split(',');
+        const segundos = parseInt(segundosParte[0]);
+        const ms = parseInt(segundosParte[1]);
+
+        return (horas * 3600000) + (minutos * 60000) + (segundos * 1000) + ms;
+    }
+
+    /**
+     * Converte milissegundos para timestamp
+     */
+    function msParaTimestamp(totalMs) {
+        // Garante que não seja negativo
+        totalMs = Math.max(0, totalMs);
+
+        const h = Math.floor(totalMs / 3600000);
+        const m = Math.floor((totalMs % 3600000) / 60000);
+        const s = Math.floor((totalMs % 60000) / 1000);
+        const ms = totalMs % 1000;
+
+        return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')},${String(ms).padStart(3, '0')}`;
+    }
+
+    /**
+     * Aumenta o tempo inicial (antecipa o início)
+     */
+    function aumentarTempoInicial() {
+        const inicioMs = timestampParaMs(inputInicio.value);
+        const fimMs = timestampParaMs(inputFim.value);
+        const novoInicioMs = Math.max(0, inicioMs + 100); // Antecipar início (diminuir tempo)
+
+        // Bloqueia se início ultrapassar ou igualar o fim
+        if (novoInicioMs >= fimMs) {
+            return;
+        }
+
+        const idAtivo = parseInt(inputIdEdicao.value);
+        const estadoAtual = historico[indiceHistorico].legendas;
+        const indexAtual = estadoAtual.findIndex(l => l.id === idAtivo);
+
+        if (indexAtual > 0) {
+            const legendaAnterior = estadoAtual[indexAtual - 1];
+            const fimAnteriorMs = timestampParaMs(legendaAnterior.fim);
+
+            // Bloqueia se invadir legenda anterior
+            if (novoInicioMs <= fimAnteriorMs) {
+                return;
             }
         }
-    } else {
-        clearEditorPanel();
-    }
-}
 
-// Bloco de fx editar/remover
-function addSegment(state) {
-    const maxId = state.subtitles.reduce((max, cur) => cur.id > max ? cur.id : max, 0);
-    const newId = maxId + 1;
-    const newSegment = { id: newId, startTime: "00:00:00,000", endTime: "00:00:01,000", text: "" };
-    state.subtitles.push(newSegment);
-    state.updateHistory(newId);
-    displaySubtitles(state.subtitles);
-    const itemElement = document.querySelector(`#subtitle-list .subtitle-item[data-id="${newId}"]`);
-    if (itemElement) {
-        updateSelectionVisuals(itemElement);
-        populateEditor(newSegment);
-        state.currentSubtitleIndex = state.subtitles.findIndex(sub => sub.id === newId);
+        inputInicio.value = msParaTimestamp(novoInicioMs);
+        atualizarVisualizacaoLista();
     }
-}
 
-function removeSegment(state) {
-    const selectedItem = document.querySelector('#subtitle-list .subtitle-item.selected');
-    if (!selectedItem) {
-        alert("Selecione um segmento para remover.");
-        return;
-    }
-    const idToRemove = parseInt(selectedItem.dataset.id, 10);
-    if (!confirm("Tem certeza que deseja remover este segmento?")) return;
-    state.subtitles = state.subtitles.filter(sub => sub.id !== idToRemove);
-    state.updateHistory(null);
-    displaySubtitles(state.subtitles);
-    clearEditorPanel();
-    if (state.subtitles.length > 0) {
-        const firstItem = document.querySelector(`#subtitle-list .subtitle-item[data-id="${state.subtitles[0].id}"]`);
-        if (firstItem) {
-            updateSelectionVisuals(firstItem);
-            populateEditor(state.subtitles[0]);
-            state.currentSubtitleIndex = 0;
+    function diminuirTempoInicial() {
+        const inicioMs = timestampParaMs(inputInicio.value);
+        const fimMs = timestampParaMs(inputFim.value);
+        const novoInicioMs = inicioMs - 100; // Atrasa início (aumenta tempo)
+
+        // Bloqueia se novo início for menor que zero
+        if (novoInicioMs < 0) {
+            return;
         }
-    } else {
-        state.currentSubtitleIndex = null;
+
+        // Bloqueia se novo início ultrapassar ou igualar o fim
+        if (novoInicioMs >= fimMs) {
+            return;
+        }
+
+        const idAtivo = parseInt(inputIdEdicao.value);
+        const estadoAtual = historico[indiceHistorico].legendas;
+        const indexAtual = estadoAtual.findIndex(l => l.id === idAtivo);
+
+        if (indexAtual > 0) {
+            const legendaAnterior = estadoAtual[indexAtual - 1];
+            const fimAnteriorMs = timestampParaMs(legendaAnterior.fim);
+
+            // Bloqueia se invadir a legenda anterior
+            if (novoInicioMs <= fimAnteriorMs) {
+                return;
+            }
+        }
+
+        inputInicio.value = msParaTimestamp(novoInicioMs);
+        atualizarVisualizacaoLista();
     }
-}
 
+    function aumentarTempoFinal() {
+        const fimMs = timestampParaMs(inputFim.value);
+        const novoFimMs = fimMs + 100; // Prolongar fim
 
-// O resto das funções (initEditorControls, initSubtitleList, handleTimeAdjust, etc.)
-// também precisam ser ajustadas para aceitar o objeto `state`.
-// Aqui estão algumas das principais:
+        const idAtivo = parseInt(inputIdEdicao.value);
+        const estadoAtual = historico[indiceHistorico].legendas;
+        const indexAtual = estadoAtual.findIndex(l => l.id === idAtivo);
 
-function initSubtitleList(state) {
-    const listContainer = document.getElementById('subtitle-list');
-    if (listContainer) {
-        listContainer.addEventListener('click', (event) => handleSubtitleClick(event, state));
+        if (indexAtual < estadoAtual.length - 1) {
+            const legendaPosterior = estadoAtual[indexAtual + 1];
+            const inicioPosteriorMs = timestampParaMs(legendaPosterior.inicio);
+
+            // Bloqueia se invadir legenda posterior (novoFimMs igual ou maior que início da posterior)
+            if (novoFimMs >= inicioPosteriorMs) {
+                return;
+            }
+        }
+
+        inputFim.value = msParaTimestamp(novoFimMs);
+        atualizarVisualizacaoLista();
     }
-}
 
-function handleSubtitleClick(event, state) {
-    updateActiveSubtitleData(state);
-    const clickedItem = event.target.closest('.subtitle-item');
-    if (!clickedItem) return;
-    const subtitleId = parseInt(clickedItem.dataset.id, 10);
-    const selectedSubtitle = state.subtitles.find(sub => sub.id === subtitleId);
-    if (selectedSubtitle) {
-        populateEditor(selectedSubtitle);
-        updateSelectionVisuals(clickedItem);
-        playVideoSegment(selectedSubtitle.startTime, selectedSubtitle.endTime);
-        state.currentSubtitleIndex = state.subtitles.findIndex(sub => sub.id === subtitleId);
-    }
-}
+    function diminuirTempoFinal() {
+        const inicioMs = timestampParaMs(inputInicio.value);
+        const fimMs = timestampParaMs(inputFim.value);
+        const novoFimMs = fimMs - 100; // Antecipar fim
 
-function initEditorControls(state) {
-    const startInput = document.getElementById('edit-start');
-    const durationInput = document.getElementById('edit-duration');
-    const endInput = document.getElementById('edit-end');
-    if (endInput) {
-        endInput.readOnly = true;
+        // Bloqueia se fim menor ou igual que início
+        if (novoFimMs <= inicioMs) {
+            return;
+        }
+
+        const idAtivo = parseInt(inputIdEdicao.value);
+        const estadoAtual = historico[indiceHistorico].legendas;
+        const indexAtual = estadoAtual.findIndex(l => l.id === idAtivo);
+
+        if (indexAtual < estadoAtual.length - 1) {
+            const legendaPosterior = estadoAtual[indexAtual + 1];
+            const inicioPosteriorMs = timestampParaMs(legendaPosterior.inicio);
+
+            // Bloqueia se invadir legenda posterior (novoFimMs igual ou maior que início da posterior)
+            if (novoFimMs >= inicioPosteriorMs) {
+                return;
+            }
+        }
+
+        inputFim.value = msParaTimestamp(novoFimMs);
+        atualizarVisualizacaoLista();
     }
-    const adjustButtons = document.querySelectorAll('.time-adjust-btn');
-    adjustButtons.forEach(button => {
-        button.addEventListener('click', (event) => handleTimeAdjust(event, state));
+
+    /**
+     * Atualiza apenas a visualização da lista sem salvar no histórico
+     */
+    function atualizarVisualizacaoLista() {
+        const idAtivo = parseInt(inputIdEdicao.value);
+        const itemDiv = document.querySelector(`[data-id="${idAtivo}"]`);
+        if (itemDiv) {
+            itemDiv.querySelector('.timestamp').textContent = `${inputInicio.value.trim()} --> ${inputFim.value.trim()}`;
+        }
+    }
+
+    // ==================================
+    // Event Listeners para Botões de Ajuste
+    // ==================================
+
+    // Botões de ajuste do tempo inicial
+    btnInicioMais.addEventListener('click', () => {
+        aumentarTempoInicial();
+        inputInicio.focus();
     });
-    const handleManualInput = () => {
-        updateFinalTime();
-        updateActiveSubtitleData(state);
-    };
-    if (startInput) {
-        startInput.addEventListener('input', handleManualInput);
-    }
-    if (durationInput) {
-        durationInput.addEventListener('input', handleManualInput);
-    }
-    const playSegmentButton = document.getElementById('playSegmentButton');
-    if (playSegmentButton) {
-        playSegmentButton.addEventListener('click', () => {
-            const selectedItem = document.querySelector('#subtitle-list .subtitle-item.selected');
-            if (selectedItem) {
-                const start = document.getElementById('edit-start').value;
-                const end = document.getElementById('edit-end').value;
-                const repeat = getRepeatSegmentValue();
-                playRepeatedSegment(start, end, repeat);
-            } else {
-                alert('Selecione uma legenda primeiro.');
+
+    btnInicioMenos.addEventListener('click', () => {
+        diminuirTempoInicial();
+        inputInicio.focus();
+    });
+
+    // Botões de ajuste do tempo final
+    btnFimMais.addEventListener('click', () => {
+        aumentarTempoFinal();
+        inputFim.focus();
+    });
+
+    btnFimMenos.addEventListener('click', () => {
+        diminuirTempoFinal();
+        inputFim.focus();
+    });
+
+    // Salva no histórico quando sair dos campos após ajuste
+    btnInicioMais.addEventListener('click', () => setTimeout(() => salvarEstado(), 500));
+    btnInicioMenos.addEventListener('click', () => setTimeout(() => salvarEstado(), 500));
+    btnFimMais.addEventListener('click', () => setTimeout(() => salvarEstado(), 500));
+    btnFimMenos.addEventListener('click', () => setTimeout(() => salvarEstado(), 500));
+    
+    // ==================================
+    // Event Listeners
+    // ==================================
+    
+    // Evento de input apenas para atualizar a visualização em tempo real
+    inputs.forEach(input => {
+        input.addEventListener('input', () => {
+            const idAtivo = parseInt(inputIdEdicao.value);
+            const itemDiv = document.querySelector(`[data-id="${idAtivo}"]`);
+            if (itemDiv) {
+                itemDiv.querySelector('.timestamp').textContent = `${inputInicio.value.trim()} --> ${inputFim.value.trim()}`;
+                itemDiv.querySelector('.legenda-texto').textContent = inputTexto.value.trim();
             }
         });
-    }
-}
+    });
 
-function handleTimeAdjust(event, state) {
-    event.preventDefault();
-    const button = event.currentTarget;
-    const targetInputId = button.dataset.target;
-    const direction = parseInt(button.dataset.direction, 10);
-    const stepInput = document.getElementById('step-increment');
-    const increment = parseFloat(stepInput.value) || 0.1;
-    const targetInput = document.getElementById(targetInputId);
-    if (!targetInput) return;
-    let currentValueInSeconds = timeStringToSeconds(targetInput.value);
-    let newValueInSeconds = currentValueInSeconds + (increment * direction);
-    if (newValueInSeconds < 0) {
-        newValueInSeconds = 0;
-    }
-    targetInput.value = secondsToTimeString(newValueInSeconds);
-    updateFinalTime();
-    updateActiveSubtitleData(state);
-}
+    // Blur apenas para o campo de texto
+    inputTexto.addEventListener('blur', salvarEstado);
+    
+    // Botão Desfazer
+    btnDesfazer.addEventListener('click', () => {
+        if (indiceHistorico > 0) {
+            indiceHistorico--;
+            aplicarEstado(historico[indiceHistorico]);
+        }
+    });
 
-// O restante das suas funções (timeStringToSeconds, secondsToTimeString, etc.)
-// não precisam de grandes alterações, mas precisam estar no escopo global
-// para serem acessadas.
-/*
-script
-cria um cloco de funcoe usando boas praticas e separacao de responsabilidades
-o todos os valores dos inputs devem ser capturados
-ao clicar em undo ou reundo o estado deve ser retomado
-/*
-document.addEventListener('DOMContentLoaded', init);
+    // Botão Refazer
+    btnRefazer.addEventListener('click', () => {
+        if (indiceHistorico < historico.length - 1) {
+            indiceHistorico++;
+            aplicarEstado(historico[indiceHistorico]);
+        }
+    });
+    
+    // Botão Linha +
+    btnLinhaAdicionar.addEventListener('click', adicionarLinha);
+
+    // Botão Linha -
+    btnLinhaRemover.addEventListener('click', removerLinha);
+
+    // Navegação        
+    btnPrevLinha.addEventListener('click', irParaLinhaAnterior);
+    btnNextLinha.addEventListener('click', irParaProximaLinha);
+    
+    // ==================================
+    // Funções de Adicionar/Remover Linhas
+    // ==================================
+
+    /**
+     * Adiciona uma nova linha após a linha selecionada
+     */
+    function adicionarLinha() {
+        const idAtivo = parseInt(inputIdEdicao.value);
+        if (!idAtivo) return;
+
+        // Salva o estado atual antes de adicionar
+        salvarEstado();
+
+        const estadoAtual = historico[indiceHistorico].legendas.map(item => ({...item}));
+        const indexAtual = estadoAtual.findIndex(l => l.id === idAtivo);
+
+        if (indexAtual === -1) return;
+
+        // Gera um novo ID (maior ID existente + 1)
+        const novoId = Math.max(...estadoAtual.map(l => l.id)) + 1;
+
+        // Pega o tempo de fim da linha atual como início da nova linha
+        const legendaAtual = estadoAtual[indexAtual];
+        const inicioNovo = legendaAtual.fim;
+        const fimNovo = calcularTempoSoma(inicioNovo, 2500); // Adiciona 2,5 segundos
+
+        const novaLegenda = {
+            id: novoId,
+            inicio: inicioNovo,
+            fim: fimNovo,
+            texto: ''
+        };
+
+        // Insere a nova legenda após a atual
+        estadoAtual.splice(indexAtual + 1, 0, novaLegenda);
+
+        // Salva o novo estado
+        historico = historico.slice(0, indiceHistorico + 1);
+        historico.push({ legendas: estadoAtual, idAtivo: novoId });
+        indiceHistorico = historico.length - 1;
+
+        aplicarEstado(historico[indiceHistorico]);
+    }
+
+    /**
+     * Remove a linha selecionada
+     */
+    function removerLinha() {
+        const idAtivo = parseInt(inputIdEdicao.value);
+        if (!idAtivo) return;
+
+        const estadoAtual = historico[indiceHistorico].legendas.map(item => ({...item}));
+
+        // Não permite remover se só houver uma linha
+        if (estadoAtual.length <= 1) {
+            alert('Não é possível remover a última legenda.');
+            return;
+        }
+
+        const indexAtual = estadoAtual.findIndex(l => l.id === idAtivo);
+        if (indexAtual === -1) return;
+
+        // Remove a linha
+        estadoAtual.splice(indexAtual, 1);
+
+        // Define qual linha ficará ativa após a remoção
+        let novoIdAtivo;
+        if (indexAtual < estadoAtual.length) {
+            // Se não era a última, ativa a próxima
+            novoIdAtivo = estadoAtual[indexAtual].id;
+        } else {
+            // Se era a última, ativa a anterior
+            novoIdAtivo = estadoAtual[indexAtual - 1].id;
+        }
+
+        // Salva o novo estado
+        historico = historico.slice(0, indiceHistorico + 1);
+        historico.push({ legendas: estadoAtual, idAtivo: novoIdAtivo });
+        indiceHistorico = historico.length - 1;
+
+        aplicarEstado(historico[indiceHistorico]);
+    }
+
+    /**
+     * Função auxiliar para somar milissegundos a um timestamp
+     */
+    function calcularTempoSoma(timestamp, milissegundos) {
+        // Converte timestamp "00:00:04,000" para milissegundos
+        const partes = timestamp.split(':');
+        const horas = parseInt(partes[0]);
+        const minutos = parseInt(partes[1]);
+        const segundosParte = partes[2].split(',');
+        const segundos = parseInt(segundosParte[0]);
+        const ms = parseInt(segundosParte[1]);
+
+        const totalMs = (horas * 3600000) + (minutos * 60000) + (segundos * 1000) + ms + milissegundos;
+
+        // Converte de volta para formato timestamp
+        const h = Math.floor(totalMs / 3600000);
+        const m = Math.floor((totalMs % 3600000) / 60000);
+        const s = Math.floor((totalMs % 60000) / 1000);
+        const msRestante = totalMs % 1000;
+
+        return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')},${String(msRestante).padStart(3, '0')}`;
+    }
+    
+    // ==================================
+    // Funções de Navegação Entre Linhas
+    // ==================================
+
+    /**
+     * Navega para a linha anterior
+     */
+    function irParaLinhaAnterior() {
+        const idAtivo = parseInt(inputIdEdicao.value);
+        if (!idAtivo) return;
+
+        const estadoAtual = historico[indiceHistorico].legendas;
+        const indexAtual = estadoAtual.findIndex(l => l.id === idAtivo);
+
+        if (indexAtual > 0) {
+            // Salva o estado da LINHA ATUAL antes de mudar o foco
+            salvarEstado();
+
+            // Pega o estado atualizado após salvar
+            const novoEstado = historico[indiceHistorico].legendas;
+            const linhaAnterior = novoEstado[indexAtual - 1];
+
+            // Carrega a linha anterior.
+            carregarLegendaParaEdicao(linhaAnterior.id, novoEstado);
+        }
+    }
+
+    /**
+     * Navega para a próxima linha
+     */
+    function irParaProximaLinha() {
+        const idAtivo = parseInt(inputIdEdicao.value);
+        if (!idAtivo) return;
+
+        const estadoAtual = historico[indiceHistorico].legendas;
+        const indexAtual = estadoAtual.findIndex(l => l.id === idAtivo);
+
+        if (indexAtual < estadoAtual.length - 1) {
+            // Salva o estado da LINHA ATUAL antes de mudar o foco
+            salvarEstado();
+
+            // Pega o estado atualizado após salvar
+            const novoEstado = historico[indiceHistorico].legendas;
+            const proximaLinha = novoEstado[indexAtual + 1];
+
+            // Carrega a próxima linha.
+            carregarLegendaParaEdicao(proximaLinha.id, novoEstado);
+        }
+    }
+
+    // ==================================
+    // Inicialização
+    // ==================================
+    
+    // Define o primeiro item como ativo para edição
+    if (legendasIniciais.length > 0) {
+        inputIdEdicao.value = legendasIniciais[0].id;
+    }
+
+    // Carrega o estado inicial (isto chama aplicarEstado, que chama carregarLegendaParaEdicao)
+    aplicarEstado(historico[0])
+
 </script>
 </body>
 </html>
