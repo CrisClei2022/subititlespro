@@ -125,6 +125,14 @@ botoes '+' e '-' funcionando.
         }
 
         /* Estilo para os botões */
+         .botoes-time {
+            display: flex; /* Transforma o botão em um container flex */
+            align-items: center; /* Alinha o conteúdo verticalmente ao centro */
+            justify-content: center; /* Alinha o conteúdo horizontalmente ao centro */
+            padding: 10px 15px;
+            max-width: 15px;
+        }
+        
         .botoes-container {
             display: flex;
             flex-wrap: wrap;
@@ -172,15 +180,15 @@ botoes '+' e '-' funcionando.
             <div class="input-group">
     <label for="input-inicio">Início:</label>
     <input type="text" id="input-inicio" class="input-campo" placeholder="Ex: 00:00:01,500">
-    <button id="btn-inicio+" style="padding: 5px 10px;">+</button>
-    <button id="btn-inicio-" style="padding: 5px 10px;">-</button>
+    <button id="btn-inicio+" class="botoes-time">+</button>
+    <button id="btn-inicio-" class="botoes-time">-</button>
 </div>
 
 <div class="input-group">
     <label for="input-fim">Fim:</label>
     <input type="text" id="input-fim" class="input-campo" placeholder="Ex: 00:00:04,000">
-    <button id="btn-fim+" style="padding: 5px 10px;">+</button>
-    <button id="btn-fim-" style="padding: 5px 10px;">-</button>
+    <button id="btn-fim+" class="botoes-time">+</button>
+    <button id="btn-fim-" class="botoes-time">-</button>
 </div>
 
             <div class="input-group">
@@ -191,8 +199,8 @@ botoes '+' e '-' funcionando.
             <div class="botoes-container">
                 <button id="btn-desfazer" disabled>↩️</button>
                 <button id="btn-refazer" disabled>↪️</button>
-                <button id="btn-linha+" disabled>Linha +</button>
-                <button id="btn-linha-" disabled>Linha -</button>
+                <button id="btn-linha+" disabled>☰ ➕️</button>
+                <button id="btn-linha-" disabled>☰ ➖</button>
             </div>
             
             <div class="botoes-container">
@@ -204,7 +212,7 @@ botoes '+' e '-' funcionando.
     </section>
 
     <section>
-        <h2>Lista de Legendas (Clique em qualquer linha para editar)</h2>
+        <p>Lista de Legendas (Clique em qualquer linha para editar)</p>
         <div id="lista-legendas">
             </div>
     </section>
