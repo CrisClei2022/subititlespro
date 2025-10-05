@@ -120,7 +120,7 @@ botoes '+' e '-' funcionando.
         }
 
         #input-inicio, #input-fim {
-            width: 150px;
+            width: 125px;
             flex-grow: 0;
         }
 
@@ -137,26 +137,26 @@ botoes '+' e '-' funcionando.
             display: flex; /* Transforma o botão em um container flex */
             align-items: center; /* Alinha o conteúdo verticalmente ao centro */
             justify-content: center; /* Alinha o conteúdo horizontalmente ao centro */
-            padding: 10px 15px;
-            max-width: 15px;
+            width: 25px;
+            height: 45px;            
         }
         
         .botoes-container {
             display: flex;
             flex-wrap: wrap;
             justify-content: center;
-            gap: 10px;
+            gap: 7px;
             margin: 10px auto 0;
         }
 
         button {
-            padding: 2px 6px;
+            padding: 3px 6px;
             border: none;
             border-radius: 4px;
             cursor: pointer;
             font-weight: bold;
             transition: background-color 0.2s;
-            flex-basis: calc(25% - 7.5px); /* 25% da largura menos o gap */
+            flex-basis: calc(20% - 7.5px); /*  */
         }
 
         #btn-desfazer, #btn-refazer {
@@ -190,6 +190,8 @@ botoes '+' e '-' funcionando.
                 <input type="text" id="input-inicio" class="input-campo" placeholder="Ex: 00:00:01,500">
                 <button id="btn-inicio+" class="botoes-time">+</button>
                 <button id="btn-inicio-" class="botoes-time">-</button>
+                <button id="btn-desfazer" class="botoes-time" disabled>↩️</button>
+                <button id="btn-refazer" class="botoes-time" disabled>↪️</button>
             </div>
 
             <div class="input-group">
@@ -197,6 +199,8 @@ botoes '+' e '-' funcionando.
                 <input type="text" id="input-fim" class="input-campo" placeholder="Ex: 00:00:04,000">
                 <button id="btn-fim+" class="botoes-time">+</button>
                 <button id="btn-fim-" class="botoes-time">-</button>
+                <button id="btn-linha+" class="botoes-time" disabled>☰ ➕️</button>
+                <button id="btn-linha-" class="botoes-time" disabled>☰ ➖</button>
             </div>
 
 			<div class="input-group">
@@ -205,16 +209,11 @@ botoes '+' e '-' funcionando.
             </div>
             
             <div class="botoes-container">
-                <button id="btn-desfazer" disabled>↩️</button>
-                <button id="btn-refazer" disabled>↪️</button>
-                <button id="btn-linha+" disabled>☰ ➕️</button>
-                <button id="btn-linha-" disabled>☰ ➖</button>
-            </div>
-            
-            <div class="botoes-container">
+                <button id="btn-new" disabled>cc</button>
                 <button id="btn-prev" disabled>◀◀</button>
                 <button id="btn-play" disabled>▶</button>
                 <button id="btn-next" disabled>▶▶ </button>
+                <button id="btn-save" disabled>sv</button>
             </div>
         </div>
     </section>
