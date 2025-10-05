@@ -35,11 +35,11 @@ botoes '+' e '-' funcionando.
         /* Estilo para a Lista de Legendas */
         /* ================================== */
         #lista-legendas {
-            display: flex;
-            flex-direction: column;
-            gap: 5px;
+            max-height: 400px; /* ou a altura que preferir */
+            overflow-y: auto;
+            width: 100%;
         }
-
+        
         .legenda-item {
             cursor: pointer;
             padding: 8px 12px;
@@ -89,9 +89,11 @@ botoes '+' e '-' funcionando.
         /* Estilo para a Área de Edição */
         /* ================================== */
         #area-edicao {
-            display: flex;
-            flex-direction: column;
-            gap: 15px;
+            position: sticky;
+            top: 0;
+            background-color: #2d2d2d;
+            z-index: 10;
+            padding: 0;
         }
 
         .input-group {
@@ -161,15 +163,8 @@ botoes '+' e '-' funcionando.
     </style>
 </head>
 <body>
-
     <section>
-        <h2>Lista de Legendas (Clique em qualquer linha para editar)</h2>
-        <div id="lista-legendas">
-            </div>
-    </section>
-
-    <section>
-        <h2>Área de Edição</h2>
+        <p>Área de Edição</p>
         <div id="area-edicao">
             
             <input type="hidden" id="input-id-edicao">
@@ -205,6 +200,13 @@ botoes '+' e '-' funcionando.
         </div>
     </section>
 
+    <section>
+        <h2>Lista de Legendas (Clique em qualquer linha para editar)</h2>
+        <div id="lista-legendas">
+            </div>
+    </section>
+
+
     <script>
     // ==================================
     // Elementos do DOM
@@ -236,7 +238,9 @@ botoes '+' e '-' funcionando.
     const legendasIniciais = [
         { id: 1, inicio: '00:00:01,500', fim: '00:00:04,000', texto: 'Olá, bem-vindo ao nosso vídeo de hoje.' },
         { id: 2, inicio: '00:00:04,500', fim: '00:00:06,000', texto: 'Vamos falar sobre um tema muito interessante.' },
-        { id: 3, inicio: '00:00:06,500', fim: '00:00:09,000', texto: 'Espero que você esteja preparado para aprender algo novo.' }
+        { id: 3, inicio: '00:00:06,500', fim: '00:00:09,000', texto: 'Espero que você esteja preparado para aprender algo novo.' },
+        { id: 4, inicio: '00:00:09,500', fim: '00:00:10,000', texto: 'Espero que você esteja preparado para aprender algo novo.' },
+        { id: 5, inicio: '00:00:10,500', fim: '00:00:12,000', texto: 'Espero que você esteja preparado para aprender algo novo.' }
     ];
 
     // Estrutura de Dados e Histórico
@@ -549,56 +553,116 @@ botoes '+' e '-' funcionando.
     /**
      * Aumenta o tempo inicial (antecipa o início)
      */
-    function aumentarTempoInicial() {
-        const inicioMs = timestampParaMs(inputInicio.value);
-        const novoInicioMs = Math.max(0, inicioMs + 100); // Diminui 100ms (antecipa)
-        inputInicio.value = msParaTimestamp(novoInicioMs);
+function aumentarTempoInicial() {
+    const inicioMs = timestampParaMs(inputInicio.value);
+    const fimMs = timestampParaMs(inputFim.value);
+    const novoInicioMs = Math.max(0, inicioMs + 100); // Antecipar início (diminuir tempo)
 
-        // Atualiza a visualização
-        atualizarVisualizacaoLista();
+    // Bloqueia se início ultrapassar ou igualar o fim
+    if (novoInicioMs >= fimMs) {
+        return;
     }
 
-    /**
-     * Diminui o tempo inicial (atrasa o início)
-     */
-    function diminuirTempoInicial() {
-        const inicioMs = timestampParaMs(inputInicio.value);
-        const fimMs = timestampParaMs(inputFim.value);
-        const novoInicioMs = inicioMs - 100; // Aumenta 100ms (atrasa)
+    const idAtivo = parseInt(inputIdEdicao.value);
+    const estadoAtual = historico[indiceHistorico].legendas;
+    const indexAtual = estadoAtual.findIndex(l => l.id === idAtivo);
 
-        // Não deixa ultrapassar o tempo final
-        if (novoInicioMs < fimMs) {
-            inputInicio.value = msParaTimestamp(novoInicioMs);
-            atualizarVisualizacaoLista();
+    if (indexAtual > 0) {
+        const legendaAnterior = estadoAtual[indexAtual - 1];
+        const fimAnteriorMs = timestampParaMs(legendaAnterior.fim);
+
+        // Bloqueia se invadir legenda anterior
+        if (novoInicioMs <= fimAnteriorMs) {
+            return;
         }
     }
 
-    /**
-     * Aumenta o tempo final (prolonga o fim)
-     */
-    function aumentarTempoFinal() {
-        const fimMs = timestampParaMs(inputFim.value);
-        const novoFimMs = fimMs + 100; // Aumenta 100ms (prolonga)
-        inputFim.value = msParaTimestamp(novoFimMs);
+    inputInicio.value = msParaTimestamp(novoInicioMs);
+    atualizarVisualizacaoLista();
+}
 
-        // Atualiza a visualização
-        atualizarVisualizacaoLista();
+function diminuirTempoInicial() {
+    const inicioMs = timestampParaMs(inputInicio.value);
+    const fimMs = timestampParaMs(inputFim.value);
+    const novoInicioMs = inicioMs - 100; // Atrasa início (aumenta tempo)
+
+    // Bloqueia se novo início for menor que zero
+    if (novoInicioMs < 0) {
+        return;
     }
 
-    /**
-     * Diminui o tempo final (antecipa o fim)
-     */
-    function diminuirTempoFinal() {
-        const inicioMs = timestampParaMs(inputInicio.value);
-        const fimMs = timestampParaMs(inputFim.value);
-        const novoFimMs = fimMs - 100; // Diminui 100ms (antecipa)
+    // Bloqueia se novo início ultrapassar ou igualar o fim
+    if (novoInicioMs >= fimMs) {
+        return;
+    }
 
-        // Não deixa ficar menor que o tempo inicial
-        if (novoFimMs > inicioMs) {
-            inputFim.value = msParaTimestamp(novoFimMs);
-            atualizarVisualizacaoLista();
+    const idAtivo = parseInt(inputIdEdicao.value);
+    const estadoAtual = historico[indiceHistorico].legendas;
+    const indexAtual = estadoAtual.findIndex(l => l.id === idAtivo);
+
+    if (indexAtual > 0) {
+        const legendaAnterior = estadoAtual[indexAtual - 1];
+        const fimAnteriorMs = timestampParaMs(legendaAnterior.fim);
+
+        // Bloqueia se invadir a legenda anterior
+        if (novoInicioMs <= fimAnteriorMs) {
+            return;
         }
     }
+
+    inputInicio.value = msParaTimestamp(novoInicioMs);
+    atualizarVisualizacaoLista();
+}
+
+function aumentarTempoFinal() {
+    const fimMs = timestampParaMs(inputFim.value);
+    const novoFimMs = fimMs + 100; // Prolongar fim
+
+    const idAtivo = parseInt(inputIdEdicao.value);
+    const estadoAtual = historico[indiceHistorico].legendas;
+    const indexAtual = estadoAtual.findIndex(l => l.id === idAtivo);
+
+    if (indexAtual < estadoAtual.length - 1) {
+        const legendaPosterior = estadoAtual[indexAtual + 1];
+        const inicioPosteriorMs = timestampParaMs(legendaPosterior.inicio);
+
+        // Bloqueia se invadir legenda posterior (novoFimMs igual ou maior que início da posterior)
+        if (novoFimMs >= inicioPosteriorMs) {
+            return;
+        }
+    }
+
+    inputFim.value = msParaTimestamp(novoFimMs);
+    atualizarVisualizacaoLista();
+}
+
+function diminuirTempoFinal() {
+    const inicioMs = timestampParaMs(inputInicio.value);
+    const fimMs = timestampParaMs(inputFim.value);
+    const novoFimMs = fimMs - 100; // Antecipar fim
+
+    // Bloqueia se fim menor ou igual que início
+    if (novoFimMs <= inicioMs) {
+        return;
+    }
+
+    const idAtivo = parseInt(inputIdEdicao.value);
+    const estadoAtual = historico[indiceHistorico].legendas;
+    const indexAtual = estadoAtual.findIndex(l => l.id === idAtivo);
+
+    if (indexAtual < estadoAtual.length - 1) {
+        const legendaPosterior = estadoAtual[indexAtual + 1];
+        const inicioPosteriorMs = timestampParaMs(legendaPosterior.inicio);
+
+        // Bloqueia se invadir legenda posterior (novoFimMs igual ou maior que início da posterior)
+        if (novoFimMs >= inicioPosteriorMs) {
+            return;
+        }
+    }
+
+    inputFim.value = msParaTimestamp(novoFimMs);
+    atualizarVisualizacaoLista();
+}
 
     /**
      * Atualiza apenas a visualização da lista sem salvar no histórico
