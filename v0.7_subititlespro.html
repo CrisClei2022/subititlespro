@@ -67,47 +67,33 @@
         
         .legenda-item {
             cursor: pointer;
-            padding: 4px 8px;
+            padding: 12px;
+            margin-bottom: 8px;
+            background: #333;
             border-radius: 4px;
-            transition: background-color 0.15s;
-            display: flex;
-            gap: 15px;
-            align-items: baseline;
-            line-height: 1.4;
+            transition: all 0.2s;
         }
 
         .legenda-item:hover {
-            background-color: #3a3a3a;
+            background-color: #444;
+            transform: translateX(5px);
         }
 
         /* Marcação para o item que está atualmente sendo editado */
         .legenda-item.legenda-ativa {
-            background-color: #5c7cfa; /* Fundo azul para o item ativo */
-            color: #1e1e1e;
+            background: #011b82;
+            color: #e1e1e3;
             font-weight: bold;
         }
 
-        .legenda-item.legenda-ativa .timestamp,
-        .legenda-item.legenda-ativa .legenda-id {
-            color: #1e1e1e; 
+        .subtitle-time {
+            font-size: 14px;
+            color: #4CAF50;
+            margin-bottom: 5px;
         }
 
-        .legenda-id {
-            font-weight: bold;
-            color: #999999;
-            width: 20px; /* Largura para o número */
-            flex-shrink: 0;
-        }
-        
-        .timestamp {
-            font-weight: bold;
-            color: #5c7cfa;
-            width: 100px; /* Largura para o tempo */
-            flex-shrink: 0;
-        }
-
-        .legenda-texto {
-            flex-grow: 1;
+        .subtitle-text {
+            font-size: 16px;
         }
 
         /* ================================== */
@@ -371,9 +357,8 @@
             }
 
             itemDiv.innerHTML = `
-                <span class="legenda-id">${legenda.id}</span>
-                <span class="timestamp">${legenda.inicio} --> ${legenda.fim}</span>
-                <span class="legenda-texto">${legenda.texto}</span>
+                <div class="subtitle-time">${legenda.inicio} --> ${legenda.fim}</div>
+                <div class="subtitle-text">${legenda.texto}</div>
             `;
             
             // Adiciona o evento de clique para carregar o item para edição
@@ -415,157 +400,157 @@
         inputTexto.focus();
     }
     
-// ==================================
-// Integração com Vídeo
-// ==================================
-let videoPlayer = null;
-let stopTimeout = null;
+    // ==================================
+    // Integração com Vídeo
+    // ==================================
+    let videoPlayer = null;
+    let stopTimeout = null;
 
-/**
- * Carrega o vídeo e o SRT a partir das URLs/arquivos fornecidos
- */
-async function openContent() {
-    const videoUrl = document.getElementById('videoUrl').value.trim();
-    const srtUrl = document.getElementById('srtUrl').value.trim();
-    const videoUpload = document.getElementById('videoUpload').files[0];
-    const srtUpload = document.getElementById('srtUpload').files[0];
+    /**
+     * Carrega o vídeo e o SRT a partir das URLs/arquivos fornecidos
+     */
+    async function openContent() {
+        const videoUrl = document.getElementById('videoUrl').value.trim();
+        const srtUrl = document.getElementById('srtUrl').value.trim();
+        const videoUpload = document.getElementById('videoUpload').files[0];
+        const srtUpload = document.getElementById('srtUpload').files[0];
 
-    try {
-        // Carrega o vídeo
-        videoPlayer = document.getElementById('videoPlayer');
-        if (videoUpload) {
-            videoPlayer.src = URL.createObjectURL(videoUpload);
-        } else if (videoUrl) {
-            videoPlayer.src = videoUrl;
+        try {
+            // Carrega o vídeo
+            videoPlayer = document.getElementById('videoPlayer');
+            if (videoUpload) {
+                videoPlayer.src = URL.createObjectURL(videoUpload);
+            } else if (videoUrl) {
+                videoPlayer.src = videoUrl;
+            }
+
+            // Carrega o SRT
+            let srtContent = '';
+            if (srtUpload) {
+                srtContent = await srtUpload.text();
+            } else if (srtUrl) {
+                const response = await fetch(srtUrl);
+                if (!response.ok) throw new Error('Erro ao carregar arquivo SRT');
+                srtContent = await response.text();
+            }
+
+            if (srtContent) {
+                carregarSRTnoEditor(srtContent);
+            }
+
+            closeLoadSaveArea();
+        } catch (error) {
+            alert('Erro ao carregar conteúdo: ' + error.message);
         }
-
-        // Carrega o SRT
-        let srtContent = '';
-        if (srtUpload) {
-            srtContent = await srtUpload.text();
-        } else if (srtUrl) {
-            const response = await fetch(srtUrl);
-            if (!response.ok) throw new Error('Erro ao carregar arquivo SRT');
-            srtContent = await response.text();
-        }
-
-        if (srtContent) {
-            carregarSRTnoEditor(srtContent);
-        }
-
-        closeLoadSaveArea();
-    } catch (error) {
-        alert('Erro ao carregar conteúdo: ' + error.message);
     }
-}
 
-/**
- * Converte o conteúdo SRT para o formato do editor
- */
-function carregarSRTnoEditor(srtContent) {
-    const linhas = srtContent.trim().split('\n');
-    const novasLegendas = [];
-    let i = 0;
+    /**
+     * Converte o conteúdo SRT para o formato do editor
+     */
+    function carregarSRTnoEditor(srtContent) {
+        const linhas = srtContent.trim().split('\n');
+        const novasLegendas = [];
+        let i = 0;
 
-    while (i < linhas.length) {
-        if (linhas[i].trim() === '') {
+        while (i < linhas.length) {
+            if (linhas[i].trim() === '') {
+                i++;
+                continue;
+            }
+
+            const id = parseInt(linhas[i]);
             i++;
-            continue;
-        }
 
-        const id = parseInt(linhas[i]);
-        i++;
+            if (isNaN(id)) continue;
 
-        if (isNaN(id)) continue;
-
-        const timeLine = linhas[i];
-        i++;
-
-        const timeMatch = timeLine.match(/(\d{2}:\d{2}:\d{2}[,\.]\d{3})\s*-->\s*(\d{2}:\d{2}:\d{2}[,\.]\d{3})/);
-        if (!timeMatch) continue;
-
-        const inicio = timeMatch[1].replace('.', ',');
-        const fim = timeMatch[2].replace('.', ',');
-
-        let texto = '';
-        while (i < linhas.length && linhas[i].trim() !== '') {
-            texto += linhas[i] + ' ';
+            const timeLine = linhas[i];
             i++;
+
+            const timeMatch = timeLine.match(/(\d{2}:\d{2}:\d{2}[,\.]\d{3})\s*-->\s*(\d{2}:\d{2}:\d{2}[,\.]\d{3})/);
+            if (!timeMatch) continue;
+
+            const inicio = timeMatch[1].replace('.', ',');
+            const fim = timeMatch[2].replace('.', ',');
+
+            let texto = '';
+            while (i < linhas.length && linhas[i].trim() !== '') {
+                texto += linhas[i] + ' ';
+                i++;
+            }
+
+            novasLegendas.push({
+                id: id,
+                inicio: inicio,
+                fim: fim,
+                texto: texto.trim()
+            });
         }
 
-        novasLegendas.push({
-            id: id,
-            inicio: inicio,
-            fim: fim,
-            texto: texto.trim()
-        });
-    }
-
-    if (novasLegendas.length > 0) {
-        // Reinicia o histórico com as novas legendas
-        historico = [{ legendas: novasLegendas, idAtivo: novasLegendas[0].id }];
-        indiceHistorico = 0;
-        aplicarEstado(historico[0]);
-    }
-}
-
-/**
- * Converte timestamp SRT para segundos
- */
-function timestampParaSegundos(timestamp) {
-    const partes = timestamp.split(':');
-    const horas = parseInt(partes[0]);
-    const minutos = parseInt(partes[1]);
-    const segundosParte = partes[2].split(',');
-    const segundos = parseInt(segundosParte[0]);
-    const ms = parseInt(segundosParte[1]);
-
-    return horas * 3600 + minutos * 60 + segundos + ms / 1000;
-}
-
-/**
- * Toca o vídeo no tempo correspondente à linha selecionada
- */
-function playLine() {
-    if (!videoPlayer || !videoPlayer.src) {
-        alert('Carregue um vídeo primeiro!');
-        return;
-    }
-
-    const idAtivo = parseInt(inputIdEdicao.value);
-    if (!idAtivo) {
-        alert('Selecione uma linha primeiro!');
-        return;
-    }
-
-    const legendaAtual = historico[indiceHistorico].legendas.find(l => l.id === idAtivo);
-    if (!legendaAtual) return;
-
-    // 1. Limpa qualquer parada agendada anteriormente
-    if (stopTimeout) {
-        clearTimeout(stopTimeout);
-    }
-
-    const tempoInicio = timestampParaSegundos(legendaAtual.inicio);
-    const tempoFim = timestampParaSegundos(legendaAtual.fim);
-    const duracaoMs = (tempoFim - tempoInicio) * 1000;
-    
-    // 2. Seta o tempo de início e começa a tocar
-    videoPlayer.currentTime = tempoInicio;
-    videoPlayer.play();
-    
-    // 3. Agenda a parada automática
-    stopTimeout = setTimeout(() => {
-        // Adiciona uma pequena tolerância (ex: 50ms) para garantir que a pausa ocorra após o fim real.
-        if (!videoPlayer.paused && videoPlayer.currentTime < tempoFim + 0.05) { 
-            videoPlayer.pause();
-            // Opcional: Para mover o cursor de tempo para o fim exato da legenda
-            // videoPlayer.currentTime = tempoFim; 
+        if (novasLegendas.length > 0) {
+            // Reinicia o histórico com as novas legendas
+            historico = [{ legendas: novasLegendas, idAtivo: novasLegendas[0].id }];
+            indiceHistorico = 0;
+            aplicarEstado(historico[0]);
         }
-        stopTimeout = null; // Limpa o timeout após a execução
-    }, duracaoMs);
-}
-	
+    }
+
+    /**
+     * Converte timestamp SRT para segundos
+     */
+    function timestampParaSegundos(timestamp) {
+        const partes = timestamp.split(':');
+        const horas = parseInt(partes[0]);
+        const minutos = parseInt(partes[1]);
+        const segundosParte = partes[2].split(',');
+        const segundos = parseInt(segundosParte[0]);
+        const ms = parseInt(segundosParte[1]);
+
+        return horas * 3600 + minutos * 60 + segundos + ms / 1000;
+    }
+
+    /**
+     * Toca o vídeo no tempo correspondente à linha selecionada
+     */
+    function playLine() {
+        if (!videoPlayer || !videoPlayer.src) {
+            alert('Carregue um vídeo primeiro!');
+            return;
+        }
+
+        const idAtivo = parseInt(inputIdEdicao.value);
+        if (!idAtivo) {
+            alert('Selecione uma linha primeiro!');
+            return;
+        }
+
+        const legendaAtual = historico[indiceHistorico].legendas.find(l => l.id === idAtivo);
+        if (!legendaAtual) return;
+
+        // 1. Limpa qualquer parada agendada anteriormente
+        if (stopTimeout) {
+            clearTimeout(stopTimeout);
+        }
+
+        const tempoInicio = timestampParaSegundos(legendaAtual.inicio);
+        const tempoFim = timestampParaSegundos(legendaAtual.fim);
+        const duracaoMs = (tempoFim - tempoInicio) * 1000;
+
+        // 2. Seta o tempo de início e começa a tocar
+        videoPlayer.currentTime = tempoInicio;
+        videoPlayer.play();
+
+        // 3. Agenda a parada automática
+        stopTimeout = setTimeout(() => {
+            // Adiciona uma pequena tolerância (ex: 50ms) para garantir que a pausa ocorra após o fim real.
+            if (!videoPlayer.paused && videoPlayer.currentTime < tempoFim + 0.05) { 
+                videoPlayer.pause();
+                // Opcional: Para mover o cursor de tempo para o fim exato da legenda
+                // videoPlayer.currentTime = tempoFim; 
+            }
+            stopTimeout = null; // Limpa o timeout após a execução
+        }, duracaoMs);
+    }
+
     // ==================================
     // Funções de Exportação (SRT)
     // ==================================
@@ -999,7 +984,7 @@ function playLine() {
         const idAtivo = parseInt(inputIdEdicao.value);
         const itemDiv = document.querySelector(`[data-id="${idAtivo}"]`);
         if (itemDiv) {
-            itemDiv.querySelector('.timestamp').textContent = `${inputInicio.value.trim()} --> ${inputFim.value.trim()}`;
+            itemDiv.querySelector('.subtitle-time').textContent = `${inputInicio.value.trim()} --> ${inputFim.value.trim()}`;
         }
     }
 
@@ -1045,8 +1030,8 @@ function playLine() {
             const idAtivo = parseInt(inputIdEdicao.value);
             const itemDiv = document.querySelector(`[data-id="${idAtivo}"]`);
             if (itemDiv) {
-                itemDiv.querySelector('.timestamp').textContent = `${inputInicio.value.trim()} --> ${inputFim.value.trim()}`;
-                itemDiv.querySelector('.legenda-texto').textContent = inputTexto.value.trim();
+                itemDiv.querySelector('.subtitle-time').textContent = `${inputInicio.value.trim()} --> ${inputFim.value.trim()}`;
+                itemDiv.querySelector('.subtitle-text').textContent = inputTexto.value.trim();
             }
         });
     });
