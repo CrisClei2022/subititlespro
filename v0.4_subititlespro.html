@@ -164,16 +164,16 @@ botoes '+' e '-' funcionando.
             color: #1e1e1e;
         }
 
-        #btn-desfazer:hover, #btn-refazer:hover {
+        #btn-desfazer:hover, #btn-refazer:hover  {
             background-color: #e6861a;
         }
 
-        #btn-prev, #btn-play, #btn-next {
+        #btn-prev, #btn-play, #btn-next, #btn-linha\+, #btn-linha\- {
             background-color: #5c7cfa;
             color: #ffffff;
         }
 
-        #btn-prev:hover, #btn-play:hover, #btn-next:hover {
+        #btn-prev:hover, #btn-play:hover, #btn-next:hover, #btn-linha\+:hover, #btn-linha\-:hover {
             background-color: #4a67e6;
         }
     </style>
@@ -188,8 +188,8 @@ botoes '+' e '-' funcionando.
             <div class="input-group">
                 <label for="input-inicio">Início:</label>
                 <input type="text" id="input-inicio" class="input-campo" placeholder="Ex: 00:00:01,500">
-                <button id="btn-inicio+" class="botoes-time">+</button>
-                <button id="btn-inicio-" class="botoes-time">-</button>
+                <button id="btn-inicio+" class="botoes-time">➕️</button>
+                <button id="btn-inicio-" class="botoes-time">➖</button>
                 <button id="btn-desfazer" class="botoes-time" disabled>↩️</button>
                 <button id="btn-refazer" class="botoes-time" disabled>↪️</button>
             </div>
@@ -197,8 +197,8 @@ botoes '+' e '-' funcionando.
             <div class="input-group">
                 <label for="input-fim">Fim:</label>
                 <input type="text" id="input-fim" class="input-campo" placeholder="Ex: 00:00:04,000">
-                <button id="btn-fim+" class="botoes-time">+</button>
-                <button id="btn-fim-" class="botoes-time">-</button>
+                <button id="btn-fim+" class="botoes-time">➕️</button>
+                <button id="btn-fim-" class="botoes-time">➖</button>
                 <button id="btn-linha+" class="botoes-time" disabled>☰ ➕️</button>
                 <button id="btn-linha-" class="botoes-time" disabled>☰ ➖</button>
             </div>
@@ -209,11 +209,11 @@ botoes '+' e '-' funcionando.
             </div>
             
             <div class="botoes-container">
-                <button id="btn-new" disabled>cc</button>
+                <button id="btn-new" disabled>📂</button>
                 <button id="btn-prev" disabled>◀◀</button>
                 <button id="btn-play" disabled>▶</button>
                 <button id="btn-next" disabled>▶▶ </button>
-                <button id="btn-save" disabled>sv</button>
+                <button id="btn-save" disabled>💾</button>
             </div>
         </div>
     </section>
