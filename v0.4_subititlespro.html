@@ -1,5 +1,5 @@
 <!-
-botoes '+' e '-' funcionando.
+'salvar' funcionando.
 ->
 <!DOCTYPE html>
 <html lang="pt-BR">
@@ -33,7 +33,18 @@ botoes '+' e '-' funcionando.
             background-color: #2d2d2d;
             box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
         }
-
+        
+        /* ================================== */
+        /* Estilo para a Load e Save */
+        /* ================================== */
+		.load-group {
+            display: flex;
+            flex-direction: column;
+            margin-top: 20px;
+            gap: 8px;
+            width: 100%;
+        }
+        
         /* ================================== */
         /* Estilo para a Lista de Legendas */
         /* ================================== */
@@ -180,20 +191,40 @@ botoes '+' e '-' funcionando.
         #btn-prev:hover, #btn-play:hover, #btn-next:hover, #btn-linha\+:hover, #btn-linha\-:hover {
             background-color: #4a67e6;
         }
+        
+        #btn-close {
+            float: right; 
+            font-size: 1.5rem;
+            font-weight: bold; 
+            cursor: pointer;
+        }
     </style>
 </head>
 <body>
 
-    <section id="load-area" class="">
-        <p>Abrir</p>
-        <div id="">
+    <section id="load-area">
+        <span id="btn-close" onclick="closeLoadSaveArea()">&times;</span>
+        <p>📂 Abrir</p>
+        <div class="load-group">
+            <label for="videoUpload" class="upload-btn">Upload Vídeo/Áudio</label>
+            <input type="text" id="videoUrl" placeholder="Cole a URL do vídeo/áudio ou faça o upload">
+            <input type="file" id="videoUpload" accept="video/*">
         </div>
+        <div class="load-group">
+        	<label for="srtUpload" class="upload-btn">Upload SRT</label>
+        	<input type="text" id="srtUrl" placeholder="Cole a URL da legenda (.srt) ou faça o upload">
+        	<input type="file" id="srtUpload" accept=".srt">
+        </div>
+            
+		<div class="botoes-container">
+            <button id="btn-open" onclick="openContent()">Carregar</button>
+		</div>
     </section>
 
     <section id="save-area" class="hidden">
+        <span id="btn-close" onclick="closeLoadSaveArea()">&times;</span>
         <p>Salvar</p>
-        <div id="">
-        </div>
+        <div id="show-save-msg"></div>        
     </section>
     
     <section>
@@ -270,11 +301,11 @@ botoes '+' e '-' funcionando.
     // ==================================
     // Estrutura de cada item: {id: number, inicio: string, fim: string, texto: string}
     const legendasIniciais = [
-        { id: 1, inicio: '00:00:01,500', fim: '00:00:04,000', texto: 'Olá, bem-vindo ao nosso vídeo de hoje.' },
+        { id: 1, inicio: '00:00:01,500', fim: '00:00:04,000', texto: 'Olá, bem-vindo ao nosso editor de legendas.' },
         { id: 2, inicio: '00:00:04,500', fim: '00:00:06,000', texto: 'Vamos falar sobre um tema muito interessante.' },
         { id: 3, inicio: '00:00:06,500', fim: '00:00:09,000', texto: 'Espero que você esteja preparado para aprender algo novo.' },
-        { id: 4, inicio: '00:00:09,500', fim: '00:00:10,000', texto: 'Espero que você esteja preparado para aprender algo novo.' },
-        { id: 5, inicio: '00:00:10,500', fim: '00:00:12,000', texto: 'Espero que você esteja preparado para aprender algo novo.' }
+        { id: 4, inicio: '00:00:09,500', fim: '00:00:10,000', texto: 'Este foi apenas um exemplo.' },
+        { id: 5, inicio: '00:00:10,500', fim: '00:00:12,000', texto: 'Não perca tempo e comece a editar suas legendas agora mesmo.' }
     ];
 
     // Estrutura de Dados e Histórico
@@ -282,6 +313,182 @@ botoes '+' e '-' funcionando.
     let historico = [{ legendas: legendasIniciais, idAtivo: legendasIniciais[0].id }];
     let indiceHistorico = 0;
     
+    // ==================================
+    // --- Funções de Carregamento (Load) ---
+    // ==================================
+
+    /**
+     * Inicia o carregamento do conteúdo, seja por URL ou upload de arquivo.
+     */
+    function openContent() {
+        const srtUrlInput = document.getElementById('srtUrl');
+        const srtUploadInput = document.getElementById('srtUpload');
+        const inputVideoUpload = document.getElementById('videoUpload'); // Use a ref. da DOM
+
+        const url = srtUrlInput.value.trim();
+
+        // 1. Carregar por URL (lógica já existente)
+        if (url) {
+            carregarSRTporURL(url);
+        } 
+        // 2. Prioridade: Carregar Áudio/Vídeo por Arquivo
+        else if (inputVideoUpload.files.length > 0) {
+            carregarAudioPorArquivo(inputVideoUpload.files[0]);
+        }
+        // 3. Carregar SRT por Arquivo (se não houver áudio e houver SRT)
+        else if (srtUploadInput.files.length > 0) {
+            carregarSRTporArquivo(srtUploadInput.files[0]);
+        } 
+        // 4. Fechar
+        else {
+            closeLoadSaveArea();
+        }
+    }
+
+    /**
+     * Faz uma requisição HTTP para obter o conteúdo do arquivo SRT de uma URL.
+     * @param {string} url O URL direto para o arquivo .srt
+     */
+    function carregarSRTporURL(url) {
+        if (!url.endsWith('.srt')) {
+            alert('O URL fornecido não parece ser um arquivo .srt.');
+            return;
+        }
+
+        fetch(url)
+            .then(response => {
+                // Verifica se a resposta foi bem-sucedida (status 200)
+                if (!response.ok) {
+                    throw new Error(`Erro HTTP! Status: ${response.status}`);
+                }
+                // Retorna o conteúdo da resposta como texto bruto
+                return response.text();
+            })
+            .then(srtText => {
+                // Chama a função que irá converter o texto SRT em objetos de legenda
+                processarSRTBruto(srtText);
+
+                // Fecha a área de carregamento após o sucesso
+                closeLoadSaveArea();
+            })
+            .catch(error => {
+                alert(`Falha ao carregar o SRT do URL: ${error.message}. Verifique o CORS ou o URL.`);
+                console.error('Erro de carregamento SRT via URL:', error);
+            });
+    }
+
+    /**
+     * Lê o conteúdo de um arquivo SRT carregado via <input type="file">.
+     * @param {File} file O objeto File do input
+     */
+    function carregarSRTporArquivo(file) {
+        const reader = new FileReader();
+
+        reader.onload = function(e) {
+            const srtText = e.target.result;
+            processarSRTBruto(srtText);
+            closeLoadSaveArea();
+        };
+
+        reader.onerror = function(e) {
+            alert("Erro ao ler o arquivo SRT.");
+            console.error('Erro de leitura do arquivo:', e);
+        };
+
+        reader.readAsText(file);
+    }
+    
+    /**
+     * Converte a string SRT bruta em um array de objetos de legenda.
+     * @param {string} srtText O conteúdo do arquivo SRT como string.
+     */
+    function processarSRTBruto(srtText) {
+        // A regex busca blocos que começam com um número e um timestamp
+        const blocos = srtText.trim().split(/\n\s*\n/);
+        const novasLegendas = [];
+        let idCounter = 1;
+
+        blocos.forEach(bloco => {
+            const linhas = bloco.trim().split('\n');
+
+            // Se o primeiro item for um número, remove ele (alguns arquivos não têm o ID)
+            if (!isNaN(parseInt(linhas[0]))) {
+                linhas.shift();
+            }
+
+            if (linhas.length >= 2) {
+                const timestampLinha = linhas[0];
+                const texto = linhas.slice(1).join('\n').trim();
+
+                const [inicioSrt, fimSrt] = timestampLinha.split(' --> ');
+
+                // SRT usa '.' para milissegundos, mas nosso formato interno usa ','
+                const inicio = inicioSrt.replace('.', ',');
+                const fim = fimSrt.replace('.', ',');
+
+                novasLegendas.push({
+                    id: idCounter++, // Usa um novo ID limpo
+                    inicio: inicio,
+                    fim: fim,
+                    texto: texto
+                });
+            }
+        });
+
+        if (novasLegendas.length > 0) {
+            // Zera o histórico e define o novo estado
+            historico = [{ legendas: novasLegendas, idAtivo: novasLegendas[0].id }];
+            indiceHistorico = 0;
+
+            // Aplica o novo estado, renderizando na tela e ativando o primeiro item
+            aplicarEstado(historico[0]);
+        } else {
+            alert("Nenhuma legenda válida encontrada no arquivo SRT.");
+        }
+    }
+    
+    /**
+     * Lê e decodifica um arquivo de Áudio/Vídeo carregado via <input type="file">.
+     * @param {File} file O objeto File do input.
+     */
+    function carregarAudioPorArquivo(file) {
+    	const inputVideoUpload = document.getElementById('videoUpload');
+        
+        // 1. Cria um novo contexto de áudio (necessário para a Web Audio API)
+        const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+
+        const reader = new FileReader();
+
+        reader.onload = function(e) {
+            const audioData = e.target.result; // ArrayBuffer com os dados do áudio
+
+            // 2. Decodifica o ArrayBuffer em um AudioBuffer
+            audioContext.decodeAudioData(audioData)
+                .then(audioBuffer => {
+                    // SUCESSO: O AudioBuffer está pronto.
+                    // Você pode armazená-lo em uma variável global para uso futuro.
+                    window.audioBufferGlobal = audioBuffer; 
+
+                    alert(`Áudio carregado com sucesso! Duração: ${audioBuffer.duration.toFixed(2)} segundos.`);
+
+                    // Exemplo de como você pode usar o AudioBuffer (você fará isso depois)
+                    // playAudio(audioBuffer, audioContext); 
+                })
+                .catch(error => {
+                    alert("Erro ao decodificar o arquivo de áudio.");
+                    console.error('Erro de decodificação de áudio:', error);
+                });
+        };
+
+        reader.onerror = function(e) {
+            alert("Erro ao ler o arquivo de áudio.");
+            console.error('Erro de leitura de arquivo:', e);
+        };
+
+        // 3. Lê o arquivo como um ArrayBuffer (necessário para decodeAudioData)
+        reader.readAsArrayBuffer(file);
+    }
+
     // ==================================
     // --- Funções de Navegação (Views) ---
     // ==================================
@@ -293,15 +500,13 @@ botoes '+' e '-' funcionando.
     function showSaveArea() {
         document.getElementById('save-area').classList.remove('hidden');
         document.getElementById('load-area').classList.add('hidden');
+        copiarSRTparaClipboard();
     }
 
 	function closeLoadSaveArea() {
         document.getElementById('load-area').classList.add('hidden');
         document.getElementById('save-area').classList.add('hidden');
 	}
-
-// Para usar, basta chamar:
-// toggleLoadSaveArea();
 
     // ==================================
     // Funções de Renderização e Carregamento
@@ -370,7 +575,86 @@ botoes '+' e '-' funcionando.
         atualizarBotoes(); // Garante que os botões de navegação e linha estejam atualizados
         inputTexto.focus();
     }
+	
+    // ==================================
+    // Funções de Exportação (SRT)
+    // ==================================
 
+    /**
+     * Converte o array de legendas para o formato de string SRT.
+     * @param {Array<Object>} legendas O array completo de legendas.
+     * @returns {string} O conteúdo formatado no padrão SRT.
+     */
+    function gerarSRT(legendas) {
+        let srtContent = '';
+
+        legendas.forEach((legenda, index) => {
+            // Formato SRT de tempo usa vírgula para milissegundos
+            const tempoInicio = legenda.inicio.replace(',', '.');
+            const tempoFim = legenda.fim.replace(',', '.');
+
+            // 1. Número da legenda
+            // 2. Timestamps (HH:MM:SS,mmm --> HH:MM:SS,mmm)
+            // 3. Texto
+            // 4. Linha em branco
+
+            srtContent += `${legenda.id}\n`;
+            srtContent += `${tempoInicio} --> ${tempoFim}\n`;
+            srtContent += `${legenda.texto}\n`;
+
+            // Adiciona uma linha em branco, exceto após a última legenda
+            if (index < legendas.length - 1) {
+                srtContent += '\n';
+            }
+        });
+
+        return srtContent;
+    }
+
+    /**
+     * Copia todo o conteúdo SRT formatado para a área de transferência.
+     */
+    function copiarSRTparaClipboard() {
+        // 1. Garante que o estado mais recente (incluindo o que está sendo editado) seja salvo
+        salvarEstado(); 
+
+        // 2. Pega o array de legendas do último estado salvo no histórico
+        const legendasAtuais = historico[indiceHistorico].legendas;
+
+        // 3. Gera a string formatada em SRT
+        const srtString = gerarSRT(legendasAtuais);
+        
+        // 3.1. Encontra o elemento pelo ID
+        const showSaveMsg = document.getElementById('show-save-msg');
+
+        // 4. Copia para o clipboard usando a API moderna (promisse)
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+            // Limpa a mensagem anterior
+            showSaveMsg.textContent = ''; 
+
+            navigator.clipboard.writeText(srtString)
+                .then(() => {
+                    // Sucesso: Exibe a mensagem na div
+                    showSaveMsg.textContent = '✅ Conteúdo SRT copiado para o clipboard! Você pode colar em um arquivo .srt.';
+                })
+                .catch(err => {
+                    console.error('Erro ao copiar SRT: ', err);
+                    // Falha: Exibe a mensagem de erro na div
+                    showSaveMsg.textContent = '❌ Falha ao copiar. Verifique as permissões do navegador.';
+                });
+        } else {
+            // Fallback: Você também deve direcionar a mensagem de fallback para a div, se houver
+            const tempTextarea = document.createElement('textarea');
+            tempTextarea.value = srtString;
+            document.body.appendChild(tempTextarea);
+            tempTextarea.select();
+            document.execCommand('copy');
+            document.body.removeChild(tempTextarea);
+
+            // Mensagem de sucesso do fallback na div
+            showSaveMsg.textContent = '✅ Conteúdo SRT copiado para o clipboard! (Método de fallback)';
+        }
+	}
     // ==================================
     // Funções de Estado e Histórico (Desfazer/Refazer)
     // ==================================
