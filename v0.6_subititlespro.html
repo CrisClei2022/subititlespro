@@ -1,5 +1,5 @@
 <!-
-'salva' funcionando.
+'salvar' funcionando.
 ->
 <!DOCTYPE html>
 <html lang="pt-BR">
@@ -220,7 +220,7 @@
     <section id="save-area" class="hidden">
         <span id="btn-close" onclick="closeLoadSaveArea()">&times;</span>
         <p>Salvar</p>
-        <p> *** Legenda copiada para área de transferência! *** </p>        
+        <div id="show-save-msg"></div>        
     </section>
     
     <section>
@@ -443,28 +443,38 @@
 
         // 3. Gera a string formatada em SRT
         const srtString = gerarSRT(legendasAtuais);
+        
+        // 3.1. Encontra o elemento pelo ID
+        const showSaveMsg = document.getElementById('show-save-msg');
 
         // 4. Copia para o clipboard usando a API moderna (promisse)
         if (navigator.clipboard && navigator.clipboard.writeText) {
+            // Limpa a mensagem anterior
+            showSaveMsg.textContent = ''; 
+
             navigator.clipboard.writeText(srtString)
                 .then(() => {
-                    alert('Conteúdo SRT copiado para o clipboard! Você pode colar em um arquivo .srt.');
+                    // Sucesso: Exibe a mensagem na div
+                    showSaveMsg.textContent = '✅ Conteúdo SRT copiado para o clipboard! Você pode colar em um arquivo .srt.';
                 })
                 .catch(err => {
                     console.error('Erro ao copiar SRT: ', err);
-                    alert('Falha ao copiar. Verifique as permissões do navegador.');
+                    // Falha: Exibe a mensagem de erro na div
+                    showSaveMsg.textContent = '❌ Falha ao copiar. Verifique as permissões do navegador.';
                 });
         } else {
-            // Fallback para navegadores mais antigos (usando o método obsoleto document.execCommand)
+            // Fallback: Você também deve direcionar a mensagem de fallback para a div, se houver
             const tempTextarea = document.createElement('textarea');
             tempTextarea.value = srtString;
             document.body.appendChild(tempTextarea);
             tempTextarea.select();
             document.execCommand('copy');
             document.body.removeChild(tempTextarea);
-            alert('Conteúdo SRT copiado para o clipboard! (Método de fallback)');
+
+            // Mensagem de sucesso do fallback na div
+            showSaveMsg.textContent = '✅ Conteúdo SRT copiado para o clipboard! (Método de fallback)';
         }
-    }
+	}
     // ==================================
     // Funções de Estado e Histórico (Desfazer/Refazer)
     // ==================================
