@@ -240,8 +240,8 @@
     </section>
     
     <section>
-        <p>Área de Edição</p>
         <div id="area-edicao">
+        	<p>Área de Edição</p>
             
             <input type="hidden" id="input-id-edicao">
             
@@ -282,7 +282,7 @@
         </div>
     </section>
 
-    <section>
+    <section id="area-legendas">
         <p>Lista de Legendas (Clique em qualquer linha para editar)</p>
         <div id="lista-legendas">
             </div>
@@ -333,19 +333,25 @@
     // --- Funções de Navegação (Views) ---
     // ==================================
     function showLoadArea() {
-    document.getElementById('load-area').classList.remove('hidden');
-    document.getElementById('save-area').classList.add('hidden');
+        document.getElementById('load-area').classList.remove('hidden');
+        document.getElementById('save-area').classList.add('hidden');
+        document.getElementById('area-edicao').classList.add('hidden');
+        document.getElementById('area-legendas').classList.add('hidden');
     }
 
     function showSaveArea() {
         document.getElementById('save-area').classList.remove('hidden');
         document.getElementById('load-area').classList.add('hidden');
+        document.getElementById('area-edicao').classList.add('hidden');
+        document.getElementById('area-legendas').classList.add('hidden');
         copiarSRTparaClipboard();
     }
 
 	function closeLoadSaveArea() {
         document.getElementById('load-area').classList.add('hidden');
         document.getElementById('save-area').classList.add('hidden');
+        document.getElementById('area-edicao').classList.remove('hidden');
+        document.getElementById('area-legendas').classList.remove('hidden');
 	}
 
     // ==================================
@@ -1248,6 +1254,7 @@
 
     // Carrega o estado inicial (isto chama aplicarEstado, que chama carregarLegendaParaEdicao)
     aplicarEstado(historico[0])
+    showLoadArea();
 
 </script>
 </body>
