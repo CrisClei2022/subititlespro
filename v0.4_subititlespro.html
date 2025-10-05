@@ -143,22 +143,22 @@ botoes '+' e '-' funcionando.
             flex-basis: calc(25% - 7.5px); /* 25% da largura menos o gap */
         }
 
-        #btn-desfazer {
-            background-color: #5c7cfa;
-            color: #ffffff;
-        }
-
-        #btn-desfazer:hover {
-            background-color: #4a67e6;
-        }
-
-        #btn-refazer {
+        #btn-desfazer, #btn-refazer {
             background-color: #f7931e;
             color: #1e1e1e;
         }
 
-        #btn-refazer:hover {
+        #btn-desfazer:hover, #btn-refazer:hover {
             background-color: #e6861a;
+        }
+
+        #btn-prev, #btn-play, #btn-next {
+            background-color: #5c7cfa;
+            color: #ffffff;
+        }
+
+        #btn-prev:hover, #btn-play:hover, #btn-next:hover {
+            background-color: #4a67e6;
         }
     </style>
 </head>
@@ -189,10 +189,13 @@ botoes '+' e '-' funcionando.
             </div>
             
             <div class="botoes-container">
-                <button id="btn-desfazer" disabled>Desfazer</button>
-                <button id="btn-refazer" disabled>Refazer</button>
+                <button id="btn-desfazer" disabled>↩️</button>
+                <button id="btn-refazer" disabled>↪️</button>
                 <button id="btn-linha+" disabled>Linha +</button>
                 <button id="btn-linha-" disabled>Linha -</button>
+            </div>
+            
+            <div class="botoes-container">
                 <button id="btn-prev" disabled>◀◀</button>
                 <button id="btn-play" disabled>▶</button>
                 <button id="btn-next" disabled>▶▶ </button>
