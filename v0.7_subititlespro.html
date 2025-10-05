@@ -1,12 +1,12 @@
 <!-
-Inputs permitem apenas numeros.
+'url srt' funcionando.
 ->
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Editor de Legenda Multi-Trecho Dark</title>
+    <title>SUBTITLE PRO - Editor de Legenda Multi-Trecho Dark</title>
     <style>
         /* ================================== */
         /* CSS Básico e Tema Dark */
@@ -14,35 +14,49 @@ Inputs permitem apenas numeros.
         body {
             font-family: Arial, sans-serif;
             background-color: #1e1e1e;
-            color: #ffffff;0
-            padding: 20px;
+            color: #ffffff;
             display: flex;
             flex-direction: column;
             align-items: center;
-            gap: 20px;
-            min-height: 100vh;
+            gap: 10px;
+        }
+
+        .hidden {
+          display: none !important;
         }
 
         section {
-            padding: 20px;
+            padding: 10px;
+            min-width: 350px; 
             max-width: 600px;
             border-radius: 8px;
             background-color: #2d2d2d;
             box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
         }
-
+        
+        /* ================================== */
+        /* Estilo para a Load e Save */
+        /* ================================== */
+		.load-group {
+            display: flex;
+            flex-direction: column;
+            margin-top: 20px;
+            gap: 8px;
+            width: 100%;
+        }
+        
         /* ================================== */
         /* Estilo para a Lista de Legendas */
         /* ================================== */
         #lista-legendas {
-            display: flex;
-            flex-direction: column;
-            gap: 5px;
+            max-height: 50vh; /* ou a altura que preferir */
+            overflow-y: auto;
+            width: 100%;
         }
-
+        
         .legenda-item {
             cursor: pointer;
-            padding: 8px 12px;
+            padding: 4px 8px;
             border-radius: 4px;
             transition: background-color 0.15s;
             display: flex;
@@ -77,7 +91,7 @@ Inputs permitem apenas numeros.
         .timestamp {
             font-weight: bold;
             color: #5c7cfa;
-            width: 170px; /* Largura para o tempo */
+            width: 100px; /* Largura para o tempo */
             flex-shrink: 0;
         }
 
@@ -89,19 +103,22 @@ Inputs permitem apenas numeros.
         /* Estilo para a Área de Edição */
         /* ================================== */
         #area-edicao {
-            display: flex;
-            flex-direction: column;
-            gap: 15px;
+            position: sticky;
+            top: 0;
+            background-color: #2d2d2d;
+            z-index: 10;
+            padding: 0;
         }
 
         .input-group {
             display: flex;
+            margin: 10px;
             gap: 10px;
             align-items: center;
         }
 
         .input-group label {
-            width: 80px; 
+            width: 50px; 
             flex-shrink: 0;
             font-weight: bold;
         }
@@ -118,58 +135,100 @@ Inputs permitem apenas numeros.
         }
 
         #input-inicio, #input-fim {
-            width: 150px; 
+            width: 125px;
             flex-grow: 0;
         }
 
+        #input-texto {
+            min-height: 75px;
+            /* Use 'normal' ou 'pre-wrap' (melhor para textos longos) */
+            white-space: normal; 
+            /* Garante que não haja barra de rolagem horizontal desnecessária */
+            overflow-x: hidden; 
+        }
+
         /* Estilo para os botões */
+        .botoes-time {
+            display: flex; /* Transforma o botão em um container flex */
+            align-items: center; /* Alinha o conteúdo verticalmente ao centro */
+            justify-content: center; /* Alinha o conteúdo horizontalmente ao centro */
+            width: 25px;
+            height: 45px;            
+        }
+        
         .botoes-container {
             display: flex;
             flex-wrap: wrap;
             justify-content: center;
-            gap: 10px;
+            gap: 7px;
             margin: 10px auto 0;
         }
 
         button {
-            padding: 10px 15px;
+            padding: 3px 6px;
             border: none;
             border-radius: 4px;
             cursor: pointer;
             font-weight: bold;
             transition: background-color 0.2s;
-            flex-basis: calc(25% - 7.5px); /* 25% da largura menos o gap */
+            flex-basis: calc(20% - 7.5px); /*  */
         }
 
-        #btn-desfazer {
-            background-color: #5c7cfa;
-            color: #ffffff;
-        }
-
-        #btn-desfazer:hover {
-            background-color: #4a67e6;
-        }
-
-        #btn-refazer {
+        #btn-desfazer, #btn-refazer {
             background-color: #f7931e;
             color: #1e1e1e;
         }
 
-        #btn-refazer:hover {
+        #btn-desfazer:hover, #btn-refazer:hover  {
             background-color: #e6861a;
+        }
+
+        #btn-prev, #btn-play, #btn-next, #btn-linha\+, #btn-linha\- {
+            background-color: #5c7cfa;
+            color: #ffffff;
+        }
+
+        #btn-prev:hover, #btn-play:hover, #btn-next:hover, #btn-linha\+:hover, #btn-linha\-:hover {
+            background-color: #4a67e6;
+        }
+        
+        #btn-close {
+            float: right; 
+            font-size: 1.5rem;
+            font-weight: bold; 
+            cursor: pointer;
         }
     </style>
 </head>
 <body>
 
-    <section>
-        <h2>Lista de Legendas (Clique em qualquer linha para editar)</h2>
-        <div id="lista-legendas">
-            </div>
+    <section id="load-area">
+        <span id="btn-close" onclick="closeLoadSaveArea()">&times;</span>
+        <p>📂 Abrir</p>
+        <div class="load-group">
+            <label for="videoUpload" class="upload-btn">Upload Vídeo</label>
+            <input type="text" id="videoUrl" placeholder="Cole a URL do vídeo ou faça o upload">
+            <input type="file" id="videoUpload" accept="video/*">
+        </div>
+        <div class="load-group">
+        	<label for="srtUpload" class="upload-btn">Upload SRT</label>
+        	<input type="text" id="srtUrl" placeholder="Cole a URL da legenda (.srt) ou faça o upload">
+        	<input type="file" id="srtUpload" accept=".srt">
+        </div>
+            
+		<div class="botoes-container">
+            <button id="btn-open" onclick="openContent()">Carregar</button>
+		</div>
     </section>
 
+    <section id="save-area" class="hidden">
+        <span id="btn-close" onclick="closeLoadSaveArea()">&times;</span>
+        <p>Salvar</p>
+        <div id="show-save-msg"></div>        
+    </section>
+    
     <section>
-        <h2>Área de Edição</h2>
+        <p>Área de Edição</p>
         <div id="area-edicao">
             
             <input type="hidden" id="input-id-edicao">
@@ -177,28 +236,40 @@ Inputs permitem apenas numeros.
             <div class="input-group">
                 <label for="input-inicio">Início:</label>
                 <input type="text" id="input-inicio" class="input-campo" placeholder="Ex: 00:00:01,500">
+                <button id="btn-inicio+" class="botoes-time">➕️</button>
+                <button id="btn-inicio-" class="botoes-time">➖</button>
+                <button id="btn-desfazer" class="botoes-time" disabled>↩️</button>
+                <button id="btn-refazer" class="botoes-time" disabled>↪️</button>
             </div>
 
             <div class="input-group">
                 <label for="input-fim">Fim:</label>
                 <input type="text" id="input-fim" class="input-campo" placeholder="Ex: 00:00:04,000">
+                <button id="btn-fim+" class="botoes-time">➕️</button>
+                <button id="btn-fim-" class="botoes-time">➖</button>
+                <button id="btn-linha+" class="botoes-time" disabled>☰ ➕️</button>
+                <button id="btn-linha-" class="botoes-time" disabled>☰ ➖</button>
             </div>
 
-            <div class="input-group">
+			<div class="input-group">
                 <label for="input-texto">Texto:</label>
-                <input type="text" id="input-texto" class="input-campo" placeholder="Texto da legenda para edição">
+                <textarea id="input-texto" class="input-campo" placeholder="Texto da legenda para edição"></textarea>
             </div>
             
             <div class="botoes-container">
-                <button id="btn-desfazer" disabled>Desfazer</button>
-                <button id="btn-refazer" disabled>Refazer</button>
-                <button id="btn-linha+" disabled>Linha +</button>
-                <button id="btn-linha-" disabled>Linha -</button>
+                <button id="btn-load" onclick="showLoadArea()">📂</button>
                 <button id="btn-prev" disabled>◀◀</button>
                 <button id="btn-play" disabled>▶</button>
                 <button id="btn-next" disabled>▶▶ </button>
+                <button id="btn-save" onclick="showSaveArea()">💾</button>
             </div>
         </div>
+    </section>
+
+    <section>
+        <p>Lista de Legendas (Clique em qualquer linha para editar)</p>
+        <div id="lista-legendas">
+            </div>
     </section>
 
     <script>
@@ -219,22 +290,175 @@ Inputs permitem apenas numeros.
     const btnLinhaRemover = document.getElementById('btn-linha-');
     const btnPrevLinha = document.getElementById('btn-prev'); 
     const btnNextLinha = document.getElementById('btn-next');
+
+    const btnInicioMais = document.getElementById('btn-inicio+');
+    const btnInicioMenos = document.getElementById('btn-inicio-');
+    const btnFimMais = document.getElementById('btn-fim+');
+    const btnFimMenos = document.getElementById('btn-fim-');
     
     // ==================================
     // Estrutura de Dados e Histórico
     // ==================================
     // Estrutura de cada item: {id: number, inicio: string, fim: string, texto: string}
     const legendasIniciais = [
-        { id: 1, inicio: '00:00:01,500', fim: '00:00:04,000', texto: 'Olá, bem-vindo ao nosso vídeo de hoje.' },
+        { id: 1, inicio: '00:00:01,500', fim: '00:00:04,000', texto: 'Olá, bem-vindo ao nosso editor de legendas.' },
         { id: 2, inicio: '00:00:04,500', fim: '00:00:06,000', texto: 'Vamos falar sobre um tema muito interessante.' },
-        { id: 3, inicio: '00:00:06,500', fim: '00:00:09,000', texto: 'Espero que você esteja preparado para aprender algo novo.' }
+        { id: 3, inicio: '00:00:06,500', fim: '00:00:09,000', texto: 'Espero que você esteja preparado para aprender algo novo.' },
+        { id: 4, inicio: '00:00:09,500', fim: '00:00:10,000', texto: 'Este foi apenas um exemplo.' },
+        { id: 5, inicio: '00:00:10,500', fim: '00:00:12,000', texto: 'Não perca tempo e comece a editar suas legendas agora mesmo.' }
     ];
 
     // Estrutura de Dados e Histórico
     // Agora o histórico armazena um objeto com as legendas E o ID ativo
     let historico = [{ legendas: legendasIniciais, idAtivo: legendasIniciais[0].id }];
     let indiceHistorico = 0;
+    
+    // ==================================
+    // --- Funções de Carregamento (Load) ---
+    // ==================================
 
+    /**
+     * Inicia o carregamento do conteúdo, seja por URL ou upload de arquivo.
+     */
+    function openContent() {
+        const srtUrlInput = document.getElementById('srtUrl');
+        const srtUploadInput = document.getElementById('srtUpload');
+        const url = srtUrlInput.value.trim();
+
+        // 1. Prioridade: Carregar por URL
+        if (url) {
+            carregarSRTporURL(url);
+        } 
+        // 2. Se não houver URL, verificar se houve upload de arquivo
+        else if (srtUploadInput.files.length > 0) {
+            carregarSRTporArquivo(srtUploadInput.files[0]);
+        } 
+        // 3. Se não houver nada, apenas fechar a área
+        else {
+            closeLoadSaveArea();
+        }
+    }
+
+    /**
+     * Faz uma requisição HTTP para obter o conteúdo do arquivo SRT de uma URL.
+     * @param {string} url O URL direto para o arquivo .srt
+     */
+    function carregarSRTporURL(url) {
+        if (!url.endsWith('.srt')) {
+            alert('O URL fornecido não parece ser um arquivo .srt.');
+            return;
+        }
+
+        fetch(url)
+            .then(response => {
+                // Verifica se a resposta foi bem-sucedida (status 200)
+                if (!response.ok) {
+                    throw new Error(`Erro HTTP! Status: ${response.status}`);
+                }
+                // Retorna o conteúdo da resposta como texto bruto
+                return response.text();
+            })
+            .then(srtText => {
+                // Chama a função que irá converter o texto SRT em objetos de legenda
+                processarSRTBruto(srtText);
+
+                // Fecha a área de carregamento após o sucesso
+                closeLoadSaveArea();
+            })
+            .catch(error => {
+                alert(`Falha ao carregar o SRT do URL: ${error.message}. Verifique o CORS ou o URL.`);
+                console.error('Erro de carregamento SRT via URL:', error);
+            });
+    }
+
+    /**
+     * Lê o conteúdo de um arquivo SRT carregado via <input type="file">.
+     * @param {File} file O objeto File do input
+     */
+    function carregarSRTporArquivo(file) {
+        const reader = new FileReader();
+
+        reader.onload = function(e) {
+            const srtText = e.target.result;
+            processarSRTBruto(srtText);
+            closeLoadSaveArea();
+        };
+
+        reader.onerror = function(e) {
+            alert("Erro ao ler o arquivo SRT.");
+            console.error('Erro de leitura do arquivo:', e);
+        };
+
+        reader.readAsText(file);
+    }
+    
+    /**
+     * Converte a string SRT bruta em um array de objetos de legenda.
+     * @param {string} srtText O conteúdo do arquivo SRT como string.
+     */
+    function processarSRTBruto(srtText) {
+        // A regex busca blocos que começam com um número e um timestamp
+        const blocos = srtText.trim().split(/\n\s*\n/);
+        const novasLegendas = [];
+        let idCounter = 1;
+
+        blocos.forEach(bloco => {
+            const linhas = bloco.trim().split('\n');
+
+            // Se o primeiro item for um número, remove ele (alguns arquivos não têm o ID)
+            if (!isNaN(parseInt(linhas[0]))) {
+                linhas.shift();
+            }
+
+            if (linhas.length >= 2) {
+                const timestampLinha = linhas[0];
+                const texto = linhas.slice(1).join('\n').trim();
+
+                const [inicioSrt, fimSrt] = timestampLinha.split(' --> ');
+
+                // SRT usa '.' para milissegundos, mas nosso formato interno usa ','
+                const inicio = inicioSrt.replace('.', ',');
+                const fim = fimSrt.replace('.', ',');
+
+                novasLegendas.push({
+                    id: idCounter++, // Usa um novo ID limpo
+                    inicio: inicio,
+                    fim: fim,
+                    texto: texto
+                });
+            }
+        });
+
+        if (novasLegendas.length > 0) {
+            // Zera o histórico e define o novo estado
+            historico = [{ legendas: novasLegendas, idAtivo: novasLegendas[0].id }];
+            indiceHistorico = 0;
+
+            // Aplica o novo estado, renderizando na tela e ativando o primeiro item
+            aplicarEstado(historico[0]);
+        } else {
+            alert("Nenhuma legenda válida encontrada no arquivo SRT.");
+        }
+    }
+    
+    // ==================================
+    // --- Funções de Navegação (Views) ---
+    // ==================================
+    function showLoadArea() {
+    document.getElementById('load-area').classList.remove('hidden');
+    document.getElementById('save-area').classList.add('hidden');
+    }
+
+    function showSaveArea() {
+        document.getElementById('save-area').classList.remove('hidden');
+        document.getElementById('load-area').classList.add('hidden');
+        copiarSRTparaClipboard();
+    }
+
+	function closeLoadSaveArea() {
+        document.getElementById('load-area').classList.add('hidden');
+        document.getElementById('save-area').classList.add('hidden');
+	}
 
     // ==================================
     // Funções de Renderização e Carregamento
@@ -281,17 +505,17 @@ Inputs permitem apenas numeros.
         const legenda = legendas.find(l => l.id === id);
         if (!legenda) return;
         
-        // Atualiza os inputs
+        // Atualiza os inputs (ISSO FAZ O TEXTO APARECER)
         inputIdEdicao.value = legenda.id; // Define o ID sendo editado
         inputInicio.value = legenda.inicio;
         inputFim.value = legenda.fim;
-        inputTexto.value = legenda.texto;
+        inputTexto.value = legenda.texto; // <--- AQUI O TEXTO É DEFINIDO
         
-        // CORREÇÃO: Força a re-renderização/atualização da lista após carregar os inputs
-        renderizarLista(legendas); 
+        // CORREÇÃO: REMOVA ESTE TRECHO
+        // Force a re-renderização/atualização da lista após carregar os inputs
+        // renderizarLista(legendas); // <--- REMOVA ESTA LINHA!
 
         // Atualiza a classe ativa na lista renderizada
-        // O renderizarLista já faz isso, mas se você não quiser re-renderizar o DOM inteiro:
         document.querySelectorAll('.legenda-item').forEach(item => {
             item.classList.remove('legenda-ativa');
         });
@@ -303,7 +527,86 @@ Inputs permitem apenas numeros.
         atualizarBotoes(); // Garante que os botões de navegação e linha estejam atualizados
         inputTexto.focus();
     }
+	
+    // ==================================
+    // Funções de Exportação (SRT)
+    // ==================================
 
+    /**
+     * Converte o array de legendas para o formato de string SRT.
+     * @param {Array<Object>} legendas O array completo de legendas.
+     * @returns {string} O conteúdo formatado no padrão SRT.
+     */
+    function gerarSRT(legendas) {
+        let srtContent = '';
+
+        legendas.forEach((legenda, index) => {
+            // Formato SRT de tempo usa vírgula para milissegundos
+            const tempoInicio = legenda.inicio.replace(',', '.');
+            const tempoFim = legenda.fim.replace(',', '.');
+
+            // 1. Número da legenda
+            // 2. Timestamps (HH:MM:SS,mmm --> HH:MM:SS,mmm)
+            // 3. Texto
+            // 4. Linha em branco
+
+            srtContent += `${legenda.id}\n`;
+            srtContent += `${tempoInicio} --> ${tempoFim}\n`;
+            srtContent += `${legenda.texto}\n`;
+
+            // Adiciona uma linha em branco, exceto após a última legenda
+            if (index < legendas.length - 1) {
+                srtContent += '\n';
+            }
+        });
+
+        return srtContent;
+    }
+
+    /**
+     * Copia todo o conteúdo SRT formatado para a área de transferência.
+     */
+    function copiarSRTparaClipboard() {
+        // 1. Garante que o estado mais recente (incluindo o que está sendo editado) seja salvo
+        salvarEstado(); 
+
+        // 2. Pega o array de legendas do último estado salvo no histórico
+        const legendasAtuais = historico[indiceHistorico].legendas;
+
+        // 3. Gera a string formatada em SRT
+        const srtString = gerarSRT(legendasAtuais);
+        
+        // 3.1. Encontra o elemento pelo ID
+        const showSaveMsg = document.getElementById('show-save-msg');
+
+        // 4. Copia para o clipboard usando a API moderna (promisse)
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+            // Limpa a mensagem anterior
+            showSaveMsg.textContent = ''; 
+
+            navigator.clipboard.writeText(srtString)
+                .then(() => {
+                    // Sucesso: Exibe a mensagem na div
+                    showSaveMsg.textContent = '✅ Conteúdo SRT copiado para o clipboard! Você pode colar em um arquivo .srt.';
+                })
+                .catch(err => {
+                    console.error('Erro ao copiar SRT: ', err);
+                    // Falha: Exibe a mensagem de erro na div
+                    showSaveMsg.textContent = '❌ Falha ao copiar. Verifique as permissões do navegador.';
+                });
+        } else {
+            // Fallback: Você também deve direcionar a mensagem de fallback para a div, se houver
+            const tempTextarea = document.createElement('textarea');
+            tempTextarea.value = srtString;
+            document.body.appendChild(tempTextarea);
+            tempTextarea.select();
+            document.execCommand('copy');
+            document.body.removeChild(tempTextarea);
+
+            // Mensagem de sucesso do fallback na div
+            showSaveMsg.textContent = '✅ Conteúdo SRT copiado para o clipboard! (Método de fallback)';
+        }
+	}
     // ==================================
     // Funções de Estado e Histórico (Desfazer/Refazer)
     // ==================================
@@ -503,6 +806,196 @@ Inputs permitem apenas numeros.
     // Blur para os inputs de tempo
     inputInicio.addEventListener('blur', salvarEstado);
     inputFim.addEventListener('blur', salvarEstado);
+    
+    // ==================================
+    // Funções de Ajuste de Tempo
+    // ==================================
+
+    /**
+     * Converte timestamp para milissegundos
+     */
+    function timestampParaMs(timestamp) {
+        const partes = timestamp.split(':');
+        const horas = parseInt(partes[0]);
+        const minutos = parseInt(partes[1]);
+        const segundosParte = partes[2].split(',');
+        const segundos = parseInt(segundosParte[0]);
+        const ms = parseInt(segundosParte[1]);
+
+        return (horas * 3600000) + (minutos * 60000) + (segundos * 1000) + ms;
+    }
+
+    /**
+     * Converte milissegundos para timestamp
+     */
+    function msParaTimestamp(totalMs) {
+        // Garante que não seja negativo
+        totalMs = Math.max(0, totalMs);
+
+        const h = Math.floor(totalMs / 3600000);
+        const m = Math.floor((totalMs % 3600000) / 60000);
+        const s = Math.floor((totalMs % 60000) / 1000);
+        const ms = totalMs % 1000;
+
+        return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')},${String(ms).padStart(3, '0')}`;
+    }
+
+    /**
+     * Aumenta o tempo inicial (antecipa o início)
+     */
+    function aumentarTempoInicial() {
+        const inicioMs = timestampParaMs(inputInicio.value);
+        const fimMs = timestampParaMs(inputFim.value);
+        const novoInicioMs = Math.max(0, inicioMs + 100); // Antecipar início (diminuir tempo)
+
+        // Bloqueia se início ultrapassar ou igualar o fim
+        if (novoInicioMs >= fimMs) {
+            return;
+        }
+
+        const idAtivo = parseInt(inputIdEdicao.value);
+        const estadoAtual = historico[indiceHistorico].legendas;
+        const indexAtual = estadoAtual.findIndex(l => l.id === idAtivo);
+
+        if (indexAtual > 0) {
+            const legendaAnterior = estadoAtual[indexAtual - 1];
+            const fimAnteriorMs = timestampParaMs(legendaAnterior.fim);
+
+            // Bloqueia se invadir legenda anterior
+            if (novoInicioMs <= fimAnteriorMs) {
+                return;
+            }
+        }
+
+        inputInicio.value = msParaTimestamp(novoInicioMs);
+        atualizarVisualizacaoLista();
+    }
+
+    function diminuirTempoInicial() {
+        const inicioMs = timestampParaMs(inputInicio.value);
+        const fimMs = timestampParaMs(inputFim.value);
+        const novoInicioMs = inicioMs - 100; // Atrasa início (aumenta tempo)
+
+        // Bloqueia se novo início for menor que zero
+        if (novoInicioMs < 0) {
+            return;
+        }
+
+        // Bloqueia se novo início ultrapassar ou igualar o fim
+        if (novoInicioMs >= fimMs) {
+            return;
+        }
+
+        const idAtivo = parseInt(inputIdEdicao.value);
+        const estadoAtual = historico[indiceHistorico].legendas;
+        const indexAtual = estadoAtual.findIndex(l => l.id === idAtivo);
+
+        if (indexAtual > 0) {
+            const legendaAnterior = estadoAtual[indexAtual - 1];
+            const fimAnteriorMs = timestampParaMs(legendaAnterior.fim);
+
+            // Bloqueia se invadir a legenda anterior
+            if (novoInicioMs <= fimAnteriorMs) {
+                return;
+            }
+        }
+
+        inputInicio.value = msParaTimestamp(novoInicioMs);
+        atualizarVisualizacaoLista();
+    }
+
+    function aumentarTempoFinal() {
+        const fimMs = timestampParaMs(inputFim.value);
+        const novoFimMs = fimMs + 100; // Prolongar fim
+
+        const idAtivo = parseInt(inputIdEdicao.value);
+        const estadoAtual = historico[indiceHistorico].legendas;
+        const indexAtual = estadoAtual.findIndex(l => l.id === idAtivo);
+
+        if (indexAtual < estadoAtual.length - 1) {
+            const legendaPosterior = estadoAtual[indexAtual + 1];
+            const inicioPosteriorMs = timestampParaMs(legendaPosterior.inicio);
+
+            // Bloqueia se invadir legenda posterior (novoFimMs igual ou maior que início da posterior)
+            if (novoFimMs >= inicioPosteriorMs) {
+                return;
+            }
+        }
+
+        inputFim.value = msParaTimestamp(novoFimMs);
+        atualizarVisualizacaoLista();
+    }
+
+    function diminuirTempoFinal() {
+        const inicioMs = timestampParaMs(inputInicio.value);
+        const fimMs = timestampParaMs(inputFim.value);
+        const novoFimMs = fimMs - 100; // Antecipar fim
+
+        // Bloqueia se fim menor ou igual que início
+        if (novoFimMs <= inicioMs) {
+            return;
+        }
+
+        const idAtivo = parseInt(inputIdEdicao.value);
+        const estadoAtual = historico[indiceHistorico].legendas;
+        const indexAtual = estadoAtual.findIndex(l => l.id === idAtivo);
+
+        if (indexAtual < estadoAtual.length - 1) {
+            const legendaPosterior = estadoAtual[indexAtual + 1];
+            const inicioPosteriorMs = timestampParaMs(legendaPosterior.inicio);
+
+            // Bloqueia se invadir legenda posterior (novoFimMs igual ou maior que início da posterior)
+            if (novoFimMs >= inicioPosteriorMs) {
+                return;
+            }
+        }
+
+        inputFim.value = msParaTimestamp(novoFimMs);
+        atualizarVisualizacaoLista();
+    }
+
+    /**
+     * Atualiza apenas a visualização da lista sem salvar no histórico
+     */
+    function atualizarVisualizacaoLista() {
+        const idAtivo = parseInt(inputIdEdicao.value);
+        const itemDiv = document.querySelector(`[data-id="${idAtivo}"]`);
+        if (itemDiv) {
+            itemDiv.querySelector('.timestamp').textContent = `${inputInicio.value.trim()} --> ${inputFim.value.trim()}`;
+        }
+    }
+
+    // ==================================
+    // Event Listeners para Botões de Ajuste
+    // ==================================
+
+    // Botões de ajuste do tempo inicial
+    btnInicioMais.addEventListener('click', () => {
+        aumentarTempoInicial();
+        inputInicio.focus();
+    });
+
+    btnInicioMenos.addEventListener('click', () => {
+        diminuirTempoInicial();
+        inputInicio.focus();
+    });
+
+    // Botões de ajuste do tempo final
+    btnFimMais.addEventListener('click', () => {
+        aumentarTempoFinal();
+        inputFim.focus();
+    });
+
+    btnFimMenos.addEventListener('click', () => {
+        diminuirTempoFinal();
+        inputFim.focus();
+    });
+
+    // Salva no histórico quando sair dos campos após ajuste
+    btnInicioMais.addEventListener('click', () => setTimeout(() => salvarEstado(), 500));
+    btnInicioMenos.addEventListener('click', () => setTimeout(() => salvarEstado(), 500));
+    btnFimMais.addEventListener('click', () => setTimeout(() => salvarEstado(), 500));
+    btnFimMenos.addEventListener('click', () => setTimeout(() => salvarEstado(), 500));
     
     // ==================================
     // Event Listeners
@@ -715,8 +1208,8 @@ Inputs permitem apenas numeros.
         inputIdEdicao.value = legendasIniciais[0].id;
     }
 
-    // Carrega o estado inicial
-    aplicarEstado(historico[0]);
+    // Carrega o estado inicial (isto chama aplicarEstado, que chama carregarLegendaParaEdicao)
+    aplicarEstado(historico[0])
 
 </script>
 </body>
