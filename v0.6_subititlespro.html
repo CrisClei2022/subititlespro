@@ -204,7 +204,7 @@
 
     <section id="load-area">
         <span id="btn-close" onclick="closeLoadSaveArea()">&times;</span>
-        <p>Abrir</p>
+        <p>📂 Abrir</p>
         <div class="load-group">
             <label for="videoUpload" class="upload-btn">Upload Vídeo</label>
             <input type="text" id="videoUrl" placeholder="Cole a URL do vídeo ou faça o upload">
@@ -215,6 +215,10 @@
         	<input type="text" id="srtUrl" placeholder="Cole a URL da legenda (.srt) ou faça o upload">
         	<input type="file" id="srtUpload" accept=".srt">
         </div>
+            
+		<div class="botoes-container">
+            <button id="btn-open" onclick="openContent()">Carregar</button>
+		</div>
     </section>
 
     <section id="save-area" class="hidden">
