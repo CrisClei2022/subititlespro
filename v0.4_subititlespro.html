@@ -21,6 +21,10 @@ botoes '+' e '-' funcionando.
             gap: 10px;
         }
 
+        .hidden {
+          display: none !important;
+        }
+
         section {
             padding: 10px;
             min-width: 350px; 
@@ -179,6 +183,19 @@ botoes '+' e '-' funcionando.
     </style>
 </head>
 <body>
+
+    <section id="load-area" class="">
+        <p>Abrir</p>
+        <div id="">
+        </div>
+    </section>
+
+    <section id="save-area" class="hidden">
+        <p>Salvar</p>
+        <div id="">
+        </div>
+    </section>
+    
     <section>
         <p>Área de Edição</p>
         <div id="area-edicao">
@@ -209,11 +226,11 @@ botoes '+' e '-' funcionando.
             </div>
             
             <div class="botoes-container">
-                <button id="btn-new" disabled>📂</button>
+                <button id="btn-load" onclick="showLoadArea()">📂</button>
                 <button id="btn-prev" disabled>◀◀</button>
                 <button id="btn-play" disabled>▶</button>
                 <button id="btn-next" disabled>▶▶ </button>
-                <button id="btn-save" disabled>💾</button>
+                <button id="btn-save" onclick="showSaveArea()">💾</button>
             </div>
         </div>
     </section>
@@ -223,7 +240,6 @@ botoes '+' e '-' funcionando.
         <div id="lista-legendas">
             </div>
     </section>
-
 
     <script>
     // ==================================
@@ -265,7 +281,27 @@ botoes '+' e '-' funcionando.
     // Agora o histórico armazena um objeto com as legendas E o ID ativo
     let historico = [{ legendas: legendasIniciais, idAtivo: legendasIniciais[0].id }];
     let indiceHistorico = 0;
+    
+    // ==================================
+    // --- Funções de Navegação (Views) ---
+    // ==================================
+    function showLoadArea() {
+    document.getElementById('load-area').classList.remove('hidden');
+    document.getElementById('save-area').classList.add('hidden');
+    }
 
+    function showSaveArea() {
+        document.getElementById('save-area').classList.remove('hidden');
+        document.getElementById('load-area').classList.add('hidden');
+    }
+
+	function closeLoadSaveArea() {
+        document.getElementById('load-area').classList.add('hidden');
+        document.getElementById('save-area').classList.add('hidden');
+	}
+
+// Para usar, basta chamar:
+// toggleLoadSaveArea();
 
     // ==================================
     // Funções de Renderização e Carregamento
@@ -571,116 +607,116 @@ botoes '+' e '-' funcionando.
     /**
      * Aumenta o tempo inicial (antecipa o início)
      */
-function aumentarTempoInicial() {
-    const inicioMs = timestampParaMs(inputInicio.value);
-    const fimMs = timestampParaMs(inputFim.value);
-    const novoInicioMs = Math.max(0, inicioMs + 100); // Antecipar início (diminuir tempo)
+    function aumentarTempoInicial() {
+        const inicioMs = timestampParaMs(inputInicio.value);
+        const fimMs = timestampParaMs(inputFim.value);
+        const novoInicioMs = Math.max(0, inicioMs + 100); // Antecipar início (diminuir tempo)
 
-    // Bloqueia se início ultrapassar ou igualar o fim
-    if (novoInicioMs >= fimMs) {
-        return;
-    }
-
-    const idAtivo = parseInt(inputIdEdicao.value);
-    const estadoAtual = historico[indiceHistorico].legendas;
-    const indexAtual = estadoAtual.findIndex(l => l.id === idAtivo);
-
-    if (indexAtual > 0) {
-        const legendaAnterior = estadoAtual[indexAtual - 1];
-        const fimAnteriorMs = timestampParaMs(legendaAnterior.fim);
-
-        // Bloqueia se invadir legenda anterior
-        if (novoInicioMs <= fimAnteriorMs) {
+        // Bloqueia se início ultrapassar ou igualar o fim
+        if (novoInicioMs >= fimMs) {
             return;
         }
+
+        const idAtivo = parseInt(inputIdEdicao.value);
+        const estadoAtual = historico[indiceHistorico].legendas;
+        const indexAtual = estadoAtual.findIndex(l => l.id === idAtivo);
+
+        if (indexAtual > 0) {
+            const legendaAnterior = estadoAtual[indexAtual - 1];
+            const fimAnteriorMs = timestampParaMs(legendaAnterior.fim);
+
+            // Bloqueia se invadir legenda anterior
+            if (novoInicioMs <= fimAnteriorMs) {
+                return;
+            }
+        }
+
+        inputInicio.value = msParaTimestamp(novoInicioMs);
+        atualizarVisualizacaoLista();
     }
 
-    inputInicio.value = msParaTimestamp(novoInicioMs);
-    atualizarVisualizacaoLista();
-}
+    function diminuirTempoInicial() {
+        const inicioMs = timestampParaMs(inputInicio.value);
+        const fimMs = timestampParaMs(inputFim.value);
+        const novoInicioMs = inicioMs - 100; // Atrasa início (aumenta tempo)
 
-function diminuirTempoInicial() {
-    const inicioMs = timestampParaMs(inputInicio.value);
-    const fimMs = timestampParaMs(inputFim.value);
-    const novoInicioMs = inicioMs - 100; // Atrasa início (aumenta tempo)
-
-    // Bloqueia se novo início for menor que zero
-    if (novoInicioMs < 0) {
-        return;
-    }
-
-    // Bloqueia se novo início ultrapassar ou igualar o fim
-    if (novoInicioMs >= fimMs) {
-        return;
-    }
-
-    const idAtivo = parseInt(inputIdEdicao.value);
-    const estadoAtual = historico[indiceHistorico].legendas;
-    const indexAtual = estadoAtual.findIndex(l => l.id === idAtivo);
-
-    if (indexAtual > 0) {
-        const legendaAnterior = estadoAtual[indexAtual - 1];
-        const fimAnteriorMs = timestampParaMs(legendaAnterior.fim);
-
-        // Bloqueia se invadir a legenda anterior
-        if (novoInicioMs <= fimAnteriorMs) {
+        // Bloqueia se novo início for menor que zero
+        if (novoInicioMs < 0) {
             return;
         }
-    }
 
-    inputInicio.value = msParaTimestamp(novoInicioMs);
-    atualizarVisualizacaoLista();
-}
-
-function aumentarTempoFinal() {
-    const fimMs = timestampParaMs(inputFim.value);
-    const novoFimMs = fimMs + 100; // Prolongar fim
-
-    const idAtivo = parseInt(inputIdEdicao.value);
-    const estadoAtual = historico[indiceHistorico].legendas;
-    const indexAtual = estadoAtual.findIndex(l => l.id === idAtivo);
-
-    if (indexAtual < estadoAtual.length - 1) {
-        const legendaPosterior = estadoAtual[indexAtual + 1];
-        const inicioPosteriorMs = timestampParaMs(legendaPosterior.inicio);
-
-        // Bloqueia se invadir legenda posterior (novoFimMs igual ou maior que início da posterior)
-        if (novoFimMs >= inicioPosteriorMs) {
+        // Bloqueia se novo início ultrapassar ou igualar o fim
+        if (novoInicioMs >= fimMs) {
             return;
         }
+
+        const idAtivo = parseInt(inputIdEdicao.value);
+        const estadoAtual = historico[indiceHistorico].legendas;
+        const indexAtual = estadoAtual.findIndex(l => l.id === idAtivo);
+
+        if (indexAtual > 0) {
+            const legendaAnterior = estadoAtual[indexAtual - 1];
+            const fimAnteriorMs = timestampParaMs(legendaAnterior.fim);
+
+            // Bloqueia se invadir a legenda anterior
+            if (novoInicioMs <= fimAnteriorMs) {
+                return;
+            }
+        }
+
+        inputInicio.value = msParaTimestamp(novoInicioMs);
+        atualizarVisualizacaoLista();
     }
 
-    inputFim.value = msParaTimestamp(novoFimMs);
-    atualizarVisualizacaoLista();
-}
+    function aumentarTempoFinal() {
+        const fimMs = timestampParaMs(inputFim.value);
+        const novoFimMs = fimMs + 100; // Prolongar fim
 
-function diminuirTempoFinal() {
-    const inicioMs = timestampParaMs(inputInicio.value);
-    const fimMs = timestampParaMs(inputFim.value);
-    const novoFimMs = fimMs - 100; // Antecipar fim
+        const idAtivo = parseInt(inputIdEdicao.value);
+        const estadoAtual = historico[indiceHistorico].legendas;
+        const indexAtual = estadoAtual.findIndex(l => l.id === idAtivo);
 
-    // Bloqueia se fim menor ou igual que início
-    if (novoFimMs <= inicioMs) {
-        return;
+        if (indexAtual < estadoAtual.length - 1) {
+            const legendaPosterior = estadoAtual[indexAtual + 1];
+            const inicioPosteriorMs = timestampParaMs(legendaPosterior.inicio);
+
+            // Bloqueia se invadir legenda posterior (novoFimMs igual ou maior que início da posterior)
+            if (novoFimMs >= inicioPosteriorMs) {
+                return;
+            }
+        }
+
+        inputFim.value = msParaTimestamp(novoFimMs);
+        atualizarVisualizacaoLista();
     }
 
-    const idAtivo = parseInt(inputIdEdicao.value);
-    const estadoAtual = historico[indiceHistorico].legendas;
-    const indexAtual = estadoAtual.findIndex(l => l.id === idAtivo);
+    function diminuirTempoFinal() {
+        const inicioMs = timestampParaMs(inputInicio.value);
+        const fimMs = timestampParaMs(inputFim.value);
+        const novoFimMs = fimMs - 100; // Antecipar fim
 
-    if (indexAtual < estadoAtual.length - 1) {
-        const legendaPosterior = estadoAtual[indexAtual + 1];
-        const inicioPosteriorMs = timestampParaMs(legendaPosterior.inicio);
-
-        // Bloqueia se invadir legenda posterior (novoFimMs igual ou maior que início da posterior)
-        if (novoFimMs >= inicioPosteriorMs) {
+        // Bloqueia se fim menor ou igual que início
+        if (novoFimMs <= inicioMs) {
             return;
         }
-    }
 
-    inputFim.value = msParaTimestamp(novoFimMs);
-    atualizarVisualizacaoLista();
-}
+        const idAtivo = parseInt(inputIdEdicao.value);
+        const estadoAtual = historico[indiceHistorico].legendas;
+        const indexAtual = estadoAtual.findIndex(l => l.id === idAtivo);
+
+        if (indexAtual < estadoAtual.length - 1) {
+            const legendaPosterior = estadoAtual[indexAtual + 1];
+            const inicioPosteriorMs = timestampParaMs(legendaPosterior.inicio);
+
+            // Bloqueia se invadir legenda posterior (novoFimMs igual ou maior que início da posterior)
+            if (novoFimMs >= inicioPosteriorMs) {
+                return;
+            }
+        }
+
+        inputFim.value = msParaTimestamp(novoFimMs);
+        atualizarVisualizacaoLista();
+    }
 
     /**
      * Atualiza apenas a visualização da lista sem salvar no histórico
