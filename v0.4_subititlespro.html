@@ -6,7 +6,7 @@ botoes '+' e '-' funcionando.
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Editor de Legenda Multi-Trecho Dark</title>
+    <title>SUBTITLE PRO - Editor de Legenda Multi-Trecho Dark</title>
     <style>
         /* ================================== */
         /* CSS Básico e Tema Dark */
@@ -14,17 +14,16 @@ botoes '+' e '-' funcionando.
         body {
             font-family: Arial, sans-serif;
             background-color: #1e1e1e;
-            color: #ffffff;0
-            padding: 20px;
+            color: #ffffff;
             display: flex;
             flex-direction: column;
             align-items: center;
-            gap: 20px;
-            min-height: 100vh;
+            gap: 10px;
         }
 
         section {
-            padding: 20px;
+            padding: 10px;
+            min-width: 350px; 
             max-width: 600px;
             border-radius: 8px;
             background-color: #2d2d2d;
@@ -35,14 +34,14 @@ botoes '+' e '-' funcionando.
         /* Estilo para a Lista de Legendas */
         /* ================================== */
         #lista-legendas {
-            max-height: 400px; /* ou a altura que preferir */
+            max-height: 50vh; /* ou a altura que preferir */
             overflow-y: auto;
             width: 100%;
         }
         
         .legenda-item {
             cursor: pointer;
-            padding: 8px 12px;
+            padding: 4px 8px;
             border-radius: 4px;
             transition: background-color 0.15s;
             display: flex;
@@ -77,7 +76,7 @@ botoes '+' e '-' funcionando.
         .timestamp {
             font-weight: bold;
             color: #5c7cfa;
-            width: 170px; /* Largura para o tempo */
+            width: 100px; /* Largura para o tempo */
             flex-shrink: 0;
         }
 
@@ -98,12 +97,13 @@ botoes '+' e '-' funcionando.
 
         .input-group {
             display: flex;
+            margin: 10px;
             gap: 10px;
             align-items: center;
         }
 
         .input-group label {
-            width: 80px; 
+            width: 50px; 
             flex-shrink: 0;
             font-weight: bold;
         }
@@ -120,12 +120,20 @@ botoes '+' e '-' funcionando.
         }
 
         #input-inicio, #input-fim {
-            width: 150px; 
+            width: 150px;
             flex-grow: 0;
         }
 
+        #input-texto {
+            min-height: 75px;
+            /* Use 'normal' ou 'pre-wrap' (melhor para textos longos) */
+            white-space: normal; 
+            /* Garante que não haja barra de rolagem horizontal desnecessária */
+            overflow-x: hidden; 
+        }
+
         /* Estilo para os botões */
-         .botoes-time {
+        .botoes-time {
             display: flex; /* Transforma o botão em um container flex */
             align-items: center; /* Alinha o conteúdo verticalmente ao centro */
             justify-content: center; /* Alinha o conteúdo horizontalmente ao centro */
@@ -142,7 +150,7 @@ botoes '+' e '-' funcionando.
         }
 
         button {
-            padding: 10px 15px;
+            padding: 2px 6px;
             border: none;
             border-radius: 4px;
             cursor: pointer;
@@ -178,22 +186,22 @@ botoes '+' e '-' funcionando.
             <input type="hidden" id="input-id-edicao">
 
             <div class="input-group">
-    <label for="input-inicio">Início:</label>
-    <input type="text" id="input-inicio" class="input-campo" placeholder="Ex: 00:00:01,500">
-    <button id="btn-inicio+" class="botoes-time">+</button>
-    <button id="btn-inicio-" class="botoes-time">-</button>
-</div>
-
-<div class="input-group">
-    <label for="input-fim">Fim:</label>
-    <input type="text" id="input-fim" class="input-campo" placeholder="Ex: 00:00:04,000">
-    <button id="btn-fim+" class="botoes-time">+</button>
-    <button id="btn-fim-" class="botoes-time">-</button>
-</div>
+                <label for="input-inicio">Início:</label>
+                <input type="text" id="input-inicio" class="input-campo" placeholder="Ex: 00:00:01,500">
+                <button id="btn-inicio+" class="botoes-time">+</button>
+                <button id="btn-inicio-" class="botoes-time">-</button>
+            </div>
 
             <div class="input-group">
+                <label for="input-fim">Fim:</label>
+                <input type="text" id="input-fim" class="input-campo" placeholder="Ex: 00:00:04,000">
+                <button id="btn-fim+" class="botoes-time">+</button>
+                <button id="btn-fim-" class="botoes-time">-</button>
+            </div>
+
+			<div class="input-group">
                 <label for="input-texto">Texto:</label>
-                <input type="text" id="input-texto" class="input-campo" placeholder="Texto da legenda para edição">
+                <textarea id="input-texto" class="input-campo" placeholder="Texto da legenda para edição"></textarea>
             </div>
             
             <div class="botoes-container">
