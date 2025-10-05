@@ -1,5 +1,5 @@
 <!-
-'url srt' funcionando.
+'play, e carregar video e srt url' funcionando.
 ->
 <!DOCTYPE html>
 <html lang="pt-BR">
@@ -32,6 +32,17 @@
             border-radius: 8px;
             background-color: #2d2d2d;
             box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+        }
+
+        .video-section {
+            background: #2a2a2a;
+            padding: 20px;
+            border-radius: 8px;
+        }
+
+        video {
+            width: 100%;
+            border-radius: 4px;
         }
         
         /* ================================== */
@@ -232,6 +243,10 @@
         <div id="area-edicao">
             
             <input type="hidden" id="input-id-edicao">
+            
+            <div class="video-section">
+                <video id="videoPlayer" controls></video>
+            </div>
 
             <div class="input-group">
                 <label for="input-inicio">Início:</label>
@@ -259,7 +274,7 @@
             <div class="botoes-container">
                 <button id="btn-load" onclick="showLoadArea()">📂</button>
                 <button id="btn-prev" disabled>◀◀</button>
-                <button id="btn-play" disabled>▶</button>
+                <button id="btn-play" onclick="playLine()">▶</button>
                 <button id="btn-next" disabled>▶▶ </button>
                 <button id="btn-save" onclick="showSaveArea()">💾</button>
             </div>
@@ -301,145 +316,17 @@
     // ==================================
     // Estrutura de cada item: {id: number, inicio: string, fim: string, texto: string}
     const legendasIniciais = [
-        { id: 1, inicio: '00:00:01,500', fim: '00:00:04,000', texto: 'Olá, bem-vindo ao nosso editor de legendas.' },
+        { id: 1, inicio: '00:00:01,500', fim: '00:00:04,000', texto: 'Olá, bem-vindo ao nosso vídeo de hoje.' },
         { id: 2, inicio: '00:00:04,500', fim: '00:00:06,000', texto: 'Vamos falar sobre um tema muito interessante.' },
         { id: 3, inicio: '00:00:06,500', fim: '00:00:09,000', texto: 'Espero que você esteja preparado para aprender algo novo.' },
-        { id: 4, inicio: '00:00:09,500', fim: '00:00:10,000', texto: 'Este foi apenas um exemplo.' },
-        { id: 5, inicio: '00:00:10,500', fim: '00:00:12,000', texto: 'Não perca tempo e comece a editar suas legendas agora mesmo.' }
+        { id: 4, inicio: '00:00:09,500', fim: '00:00:10,000', texto: 'Espero que você esteja preparado para aprender algo novo.' },
+        { id: 5, inicio: '00:00:10,500', fim: '00:00:12,000', texto: 'Espero que você esteja preparado para aprender algo novo.' }
     ];
 
     // Estrutura de Dados e Histórico
     // Agora o histórico armazena um objeto com as legendas E o ID ativo
     let historico = [{ legendas: legendasIniciais, idAtivo: legendasIniciais[0].id }];
     let indiceHistorico = 0;
-    
-    // ==================================
-    // --- Funções de Carregamento (Load) ---
-    // ==================================
-
-    /**
-     * Inicia o carregamento do conteúdo, seja por URL ou upload de arquivo.
-     */
-    function openContent() {
-        const srtUrlInput = document.getElementById('srtUrl');
-        const srtUploadInput = document.getElementById('srtUpload');
-        const url = srtUrlInput.value.trim();
-
-        // 1. Prioridade: Carregar por URL
-        if (url) {
-            carregarSRTporURL(url);
-        } 
-        // 2. Se não houver URL, verificar se houve upload de arquivo
-        else if (srtUploadInput.files.length > 0) {
-            carregarSRTporArquivo(srtUploadInput.files[0]);
-        } 
-        // 3. Se não houver nada, apenas fechar a área
-        else {
-            closeLoadSaveArea();
-        }
-    }
-
-    /**
-     * Faz uma requisição HTTP para obter o conteúdo do arquivo SRT de uma URL.
-     * @param {string} url O URL direto para o arquivo .srt
-     */
-    function carregarSRTporURL(url) {
-        if (!url.endsWith('.srt')) {
-            alert('O URL fornecido não parece ser um arquivo .srt.');
-            return;
-        }
-
-        fetch(url)
-            .then(response => {
-                // Verifica se a resposta foi bem-sucedida (status 200)
-                if (!response.ok) {
-                    throw new Error(`Erro HTTP! Status: ${response.status}`);
-                }
-                // Retorna o conteúdo da resposta como texto bruto
-                return response.text();
-            })
-            .then(srtText => {
-                // Chama a função que irá converter o texto SRT em objetos de legenda
-                processarSRTBruto(srtText);
-
-                // Fecha a área de carregamento após o sucesso
-                closeLoadSaveArea();
-            })
-            .catch(error => {
-                alert(`Falha ao carregar o SRT do URL: ${error.message}. Verifique o CORS ou o URL.`);
-                console.error('Erro de carregamento SRT via URL:', error);
-            });
-    }
-
-    /**
-     * Lê o conteúdo de um arquivo SRT carregado via <input type="file">.
-     * @param {File} file O objeto File do input
-     */
-    function carregarSRTporArquivo(file) {
-        const reader = new FileReader();
-
-        reader.onload = function(e) {
-            const srtText = e.target.result;
-            processarSRTBruto(srtText);
-            closeLoadSaveArea();
-        };
-
-        reader.onerror = function(e) {
-            alert("Erro ao ler o arquivo SRT.");
-            console.error('Erro de leitura do arquivo:', e);
-        };
-
-        reader.readAsText(file);
-    }
-    
-    /**
-     * Converte a string SRT bruta em um array de objetos de legenda.
-     * @param {string} srtText O conteúdo do arquivo SRT como string.
-     */
-    function processarSRTBruto(srtText) {
-        // A regex busca blocos que começam com um número e um timestamp
-        const blocos = srtText.trim().split(/\n\s*\n/);
-        const novasLegendas = [];
-        let idCounter = 1;
-
-        blocos.forEach(bloco => {
-            const linhas = bloco.trim().split('\n');
-
-            // Se o primeiro item for um número, remove ele (alguns arquivos não têm o ID)
-            if (!isNaN(parseInt(linhas[0]))) {
-                linhas.shift();
-            }
-
-            if (linhas.length >= 2) {
-                const timestampLinha = linhas[0];
-                const texto = linhas.slice(1).join('\n').trim();
-
-                const [inicioSrt, fimSrt] = timestampLinha.split(' --> ');
-
-                // SRT usa '.' para milissegundos, mas nosso formato interno usa ','
-                const inicio = inicioSrt.replace('.', ',');
-                const fim = fimSrt.replace('.', ',');
-
-                novasLegendas.push({
-                    id: idCounter++, // Usa um novo ID limpo
-                    inicio: inicio,
-                    fim: fim,
-                    texto: texto
-                });
-            }
-        });
-
-        if (novasLegendas.length > 0) {
-            // Zera o histórico e define o novo estado
-            historico = [{ legendas: novasLegendas, idAtivo: novasLegendas[0].id }];
-            indiceHistorico = 0;
-
-            // Aplica o novo estado, renderizando na tela e ativando o primeiro item
-            aplicarEstado(historico[0]);
-        } else {
-            alert("Nenhuma legenda válida encontrada no arquivo SRT.");
-        }
-    }
     
     // ==================================
     // --- Funções de Navegação (Views) ---
@@ -527,6 +414,142 @@
         atualizarBotoes(); // Garante que os botões de navegação e linha estejam atualizados
         inputTexto.focus();
     }
+    
+// ==================================
+// Integração com Vídeo
+// ==================================
+let videoPlayer = null;
+
+/**
+ * Carrega o vídeo e o SRT a partir das URLs/arquivos fornecidos
+ */
+async function openContent() {
+    const videoUrl = document.getElementById('videoUrl').value.trim();
+    const srtUrl = document.getElementById('srtUrl').value.trim();
+    const videoUpload = document.getElementById('videoUpload').files[0];
+    const srtUpload = document.getElementById('srtUpload').files[0];
+
+    try {
+        // Carrega o vídeo
+        videoPlayer = document.getElementById('videoPlayer');
+        if (videoUpload) {
+            videoPlayer.src = URL.createObjectURL(videoUpload);
+        } else if (videoUrl) {
+            videoPlayer.src = videoUrl;
+        }
+
+        // Carrega o SRT
+        let srtContent = '';
+        if (srtUpload) {
+            srtContent = await srtUpload.text();
+        } else if (srtUrl) {
+            const response = await fetch(srtUrl);
+            if (!response.ok) throw new Error('Erro ao carregar arquivo SRT');
+            srtContent = await response.text();
+        }
+
+        if (srtContent) {
+            carregarSRTnoEditor(srtContent);
+        }
+
+        closeLoadSaveArea();
+    } catch (error) {
+        alert('Erro ao carregar conteúdo: ' + error.message);
+    }
+}
+
+/**
+ * Converte o conteúdo SRT para o formato do editor
+ */
+function carregarSRTnoEditor(srtContent) {
+    const linhas = srtContent.trim().split('\n');
+    const novasLegendas = [];
+    let i = 0;
+
+    while (i < linhas.length) {
+        if (linhas[i].trim() === '') {
+            i++;
+            continue;
+        }
+
+        const id = parseInt(linhas[i]);
+        i++;
+
+        if (isNaN(id)) continue;
+
+        const timeLine = linhas[i];
+        i++;
+
+        const timeMatch = timeLine.match(/(\d{2}:\d{2}:\d{2}[,\.]\d{3})\s*-->\s*(\d{2}:\d{2}:\d{2}[,\.]\d{3})/);
+        if (!timeMatch) continue;
+
+        const inicio = timeMatch[1].replace('.', ',');
+        const fim = timeMatch[2].replace('.', ',');
+
+        let texto = '';
+        while (i < linhas.length && linhas[i].trim() !== '') {
+            texto += linhas[i] + ' ';
+            i++;
+        }
+
+        novasLegendas.push({
+            id: id,
+            inicio: inicio,
+            fim: fim,
+            texto: texto.trim()
+        });
+    }
+
+    if (novasLegendas.length > 0) {
+        // Reinicia o histórico com as novas legendas
+        historico = [{ legendas: novasLegendas, idAtivo: novasLegendas[0].id }];
+        indiceHistorico = 0;
+        aplicarEstado(historico[0]);
+    }
+}
+
+/**
+ * Converte timestamp SRT para segundos
+ */
+function timestampParaSegundos(timestamp) {
+    const partes = timestamp.split(':');
+    const horas = parseInt(partes[0]);
+    const minutos = parseInt(partes[1]);
+    const segundosParte = partes[2].split(',');
+    const segundos = parseInt(segundosParte[0]);
+    const ms = parseInt(segundosParte[1]);
+
+    return horas * 3600 + minutos * 60 + segundos + ms / 1000;
+}
+
+/**
+ * Toca o vídeo no tempo correspondente à linha selecionada
+ */
+function playLine() {
+    if (!videoPlayer) {
+        alert('Carregue um vídeo primeiro!');
+        return;
+    }
+
+    const idAtivo = parseInt(inputIdEdicao.value);
+    if (!idAtivo) {
+        alert('Selecione uma linha primeiro!');
+        return;
+    }
+
+    const legendaAtual = historico[indiceHistorico].legendas.find(l => l.id === idAtivo);
+    if (!legendaAtual) return;
+
+    const tempoInicio = timestampParaSegundos(legendaAtual.inicio);
+    
+    videoPlayer.currentTime = tempoInicio;
+    
+    if (videoPlayer.paused) {
+        videoPlayer.play();
+    } else {
+        videoPlayer.pause();
+    }
+}
 	
     // ==================================
     // Funções de Exportação (SRT)
