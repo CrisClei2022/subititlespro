@@ -191,11 +191,19 @@ botoes '+' e '-' funcionando.
         #btn-prev:hover, #btn-play:hover, #btn-next:hover, #btn-linha\+:hover, #btn-linha\-:hover {
             background-color: #4a67e6;
         }
+        
+        #btn-close {
+            float: right; 
+            font-size: 1.5rem;
+            font-weight: bold; 
+            cursor: pointer;
+        }
     </style>
 </head>
 <body>
 
     <section id="load-area">
+        <span id="btn-close" onclick="closeLoadSaveArea()">&times;</span>
         <p>Abrir</p>
         <div class="load-group">
             <label for="videoUpload" class="upload-btn">Upload Vídeo</label>
@@ -210,6 +218,7 @@ botoes '+' e '-' funcionando.
     </section>
 
     <section id="save-area" class="hidden">
+        <span id="btn-close" onclick="closeLoadSaveArea()">&times;</span>
         <p>Salvar</p>
         <div id="">
         </div>
