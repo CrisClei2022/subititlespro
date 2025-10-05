@@ -419,6 +419,7 @@
 // Integração com Vídeo
 // ==================================
 let videoPlayer = null;
+let stopTimeout = null;
 
 /**
  * Carrega o vídeo e o SRT a partir das URLs/arquivos fornecidos
@@ -526,7 +527,7 @@ function timestampParaSegundos(timestamp) {
  * Toca o vídeo no tempo correspondente à linha selecionada
  */
 function playLine() {
-    if (!videoPlayer) {
+    if (!videoPlayer || !videoPlayer.src) {
         alert('Carregue um vídeo primeiro!');
         return;
     }
@@ -540,15 +541,29 @@ function playLine() {
     const legendaAtual = historico[indiceHistorico].legendas.find(l => l.id === idAtivo);
     if (!legendaAtual) return;
 
-    const tempoInicio = timestampParaSegundos(legendaAtual.inicio);
-    
-    videoPlayer.currentTime = tempoInicio;
-    
-    if (videoPlayer.paused) {
-        videoPlayer.play();
-    } else {
-        videoPlayer.pause();
+    // 1. Limpa qualquer parada agendada anteriormente
+    if (stopTimeout) {
+        clearTimeout(stopTimeout);
     }
+
+    const tempoInicio = timestampParaSegundos(legendaAtual.inicio);
+    const tempoFim = timestampParaSegundos(legendaAtual.fim);
+    const duracaoMs = (tempoFim - tempoInicio) * 1000;
+    
+    // 2. Seta o tempo de início e começa a tocar
+    videoPlayer.currentTime = tempoInicio;
+    videoPlayer.play();
+    
+    // 3. Agenda a parada automática
+    stopTimeout = setTimeout(() => {
+        // Adiciona uma pequena tolerância (ex: 50ms) para garantir que a pausa ocorra após o fim real.
+        if (!videoPlayer.paused && videoPlayer.currentTime < tempoFim + 0.05) { 
+            videoPlayer.pause();
+            // Opcional: Para mover o cursor de tempo para o fim exato da legenda
+            // videoPlayer.currentTime = tempoFim; 
+        }
+        stopTimeout = null; // Limpa o timeout após a execução
+    }, duracaoMs);
 }
 	
     // ==================================
