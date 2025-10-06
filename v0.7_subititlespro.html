@@ -759,9 +759,10 @@
         const novoEstado = getEstadoAtual();
         const idAtivo = parseInt(inputIdEdicao.value);
         const ultimoEstado = historico[indiceHistorico]; 
-
-        // Compara apenas as legendas para evitar salvar se só mudou o ID ativo (seleção)
-        if (JSON.stringify(novoEstado) === JSON.stringify(ultimoEstado.legendas)) {
+    
+        // Compara legendas E id ativo - só ignora se AMBOS forem idênticos
+        if (JSON.stringify(novoEstado) === JSON.stringify(ultimoEstado.legendas) && 
+            idAtivo === ultimoEstado.idAtivo) {
             return;
         }
 
@@ -770,8 +771,6 @@
         // Adiciona o novo estado com as legendas E o ID ativo
         historico.push({ legendas: novoEstado, idAtivo: idAtivo });
         indiceHistorico = historico.length - 1;
-
-        renderizarLista(novoEstado); 
 
         atualizarBotoes();
     }
@@ -1254,20 +1253,19 @@
     function irParaLinhaAnterior() {
         const idAtivo = parseInt(inputIdEdicao.value);
         if (!idAtivo) return;
-
+    
         const estadoAtual = historico[indiceHistorico].legendas;
         const indexAtual = estadoAtual.findIndex(l => l.id === idAtivo);
-
+    
         if (indexAtual > 0) {
-            // Salva o estado da LINHA ATUAL antes de mudar o foco
+            // Salva ANTES de mudar
             salvarEstado();
-
-            // Pega o estado atualizado após salvar
-            const novoEstado = historico[indiceHistorico].legendas;
-            const linhaAnterior = novoEstado[indexAtual - 1];
-
-            // Carrega a linha anterior.
-            carregarLegendaParaEdicao(linhaAnterior.id, novoEstado);
+    
+            // Agora busca no histórico atualizado
+            const estadoAtualizado = historico[indiceHistorico].legendas;
+            const linhaAnterior = estadoAtualizado[indexAtual - 1];
+    
+            carregarLegendaParaEdicao(linhaAnterior.id, estadoAtualizado);
         }
     }
 
@@ -1277,20 +1275,19 @@
     function irParaProximaLinha() {
         const idAtivo = parseInt(inputIdEdicao.value);
         if (!idAtivo) return;
-
+    
         const estadoAtual = historico[indiceHistorico].legendas;
         const indexAtual = estadoAtual.findIndex(l => l.id === idAtivo);
-
+    
         if (indexAtual < estadoAtual.length - 1) {
-            // Salva o estado da LINHA ATUAL antes de mudar o foco
+            // Salva ANTES de mudar
             salvarEstado();
-
-            // Pega o estado atualizado após salvar
-            const novoEstado = historico[indiceHistorico].legendas;
-            const proximaLinha = novoEstado[indexAtual + 1];
-
-            // Carrega a próxima linha.
-            carregarLegendaParaEdicao(proximaLinha.id, novoEstado);
+    
+            // Agora busca no histórico atualizado
+            const estadoAtualizado = historico[indiceHistorico].legendas;
+            const proximaLinha = estadoAtualizado[indexAtual + 1];
+    
+            carregarLegendaParaEdicao(proximaLinha.id, estadoAtualizado);
         }
     }
 
