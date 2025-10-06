@@ -138,17 +138,23 @@
 
         /* Marcação para o item que está atualmente sendo editado */
         .legenda-item.legenda-ativa {
-            background: #011b82;
-            color: #e1e1e3;
+            background: linear-gradient(#AFD9E3, #26A8CA 100%);
+            color: #252742;
             font-weight: bold;
         }
 
         .subtitle-time {
             font-size: 14px;
-            color: #4CAF50;
+            color: #007bff; /* Exemplo: Azul vibrante */
             margin-bottom: 5px;
         }
 
+        /* Estilo para o tempo da legenda ATIVA */
+        .tempo-ativo {
+            font-weight: bold;
+			color: #25422E;
+        }
+        
         .subtitle-text {
             font-size: 16px;
         }
@@ -410,31 +416,38 @@
      * @param {Array<Object>} legendas O array completo de legendas.
      */
     function renderizarLista(legendas) {
-        listaLegendasDiv.innerHTML = ''; // Limpa a lista atual
+    listaLegendasDiv.innerHTML = ''; // Limpa a lista atual
 
-        const idAtivo = parseInt(inputIdEdicao.value);
+    const idAtivo = parseInt(inputIdEdicao.value);
 
-        legendas.forEach(legenda => {
-            const itemDiv = document.createElement('div');
-            itemDiv.setAttribute('data-id', legenda.id);
-            itemDiv.classList.add('legenda-item');
-            
-            // Define a classe 'ativa' se for o item em foco
-            if (legenda.id === idAtivo) {
-                itemDiv.classList.add('legenda-ativa');
-            }
+    legendas.forEach(legenda => {
+        const itemDiv = document.createElement('div');
+        itemDiv.setAttribute('data-id', legenda.id);
+        itemDiv.classList.add('legenda-item');
+        
+        // Define a classe 'ativa' se for o item em foco
+        const isAtiva = legenda.id === idAtivo; // Variável auxiliar
 
-            itemDiv.innerHTML = `
-                <div class="subtitle-time">${legenda.inicio} --> ${legenda.fim}</div>
-                <div class="subtitle-text">${legenda.texto}</div>
-            `;
-            
-            // Adiciona o evento de clique para carregar o item para edição
-            itemDiv.addEventListener('click', () => carregarLegendaParaEdicao(legenda.id, legendas));
-            
-            listaLegendasDiv.appendChild(itemDiv);
-        });
-    }
+        if (isAtiva) {
+            itemDiv.classList.add('legenda-ativa');
+        }
+
+        // --- TRECHO AJUSTADO AQUI ---
+        // A classe 'tempo-ativo' é adicionada ao elemento subtitle-time se isAtiva for true
+        const classeTempo = isAtiva ? ' tempo-ativo' : '';
+
+        itemDiv.innerHTML = `
+            <div class="subtitle-time${classeTempo}">${legenda.inicio} --> ${legenda.fim}</div>
+            <div class="subtitle-text">${legenda.texto}</div>
+        `;
+        // -----------------------------
+        
+        // Adiciona o evento de clique para carregar o item para edição
+        itemDiv.addEventListener('click', () => carregarLegendaParaEdicao(legenda.id, legendas));
+        
+        listaLegendasDiv.appendChild(itemDiv);
+    });
+}
 
     /**
      * Carrega os dados de uma legenda específica para os inputs de edição.
