@@ -139,7 +139,7 @@
         /* Marcação para o item que está atualmente sendo editado */
         .legenda-item.legenda-ativa {
             background: linear-gradient(#AFD9E3, #628FA1 100%);
-            color: #252742;
+            color: #0B2A40;
             font-weight: bold;
         }
 
@@ -455,29 +455,41 @@
      * @param {Array<Object>} legendas O array de legendas a ser consultado.
      */
     function carregarLegendaParaEdicao(id, legendas) {
-        const legenda = legendas.find(l => l.id === id);
+    	const legenda = legendas.find(l => l.id === id);
         if (!legenda) return;
-        
-        // Atualiza os inputs (ISSO FAZ O TEXTO APARECER)
+
+        // 1. Atualiza os inputs de edição
         inputIdEdicao.value = legenda.id; // Define o ID sendo editado
         inputInicio.value = legenda.inicio;
         inputFim.value = legenda.fim;
-        inputTexto.value = legenda.texto; // <--- AQUI O TEXTO É DEFINIDO
-        
-        // CORREÇÃO: REMOVA ESTE TRECHO
-        // Force a re-renderização/atualização da lista após carregar os inputs
-        // renderizarLista(legendas); // <--- REMOVA ESTA LINHA!
+        inputTexto.value = legenda.texto;
 
-        // Atualiza a classe ativa na lista renderizada
+        // 2. Limpa e Define as classes 'ativa' (Item da Lista)
+
+        // A. Remove as classes de TODOS os itens anteriormente ativos
         document.querySelectorAll('.legenda-item').forEach(item => {
             item.classList.remove('legenda-ativa');
+
+            // **NOVA LÓGICA:** Remove a classe do tempo do item anterior
+            const tempoAnterior = item.querySelector('.subtitle-time');
+            if (tempoAnterior) {
+                tempoAnterior.classList.remove('tempo-ativo');
+            }
         });
+
+        // B. Ativa o novo item
         const itemAtivo = document.querySelector(`[data-id="${id}"]`);
         if (itemAtivo) {
             itemAtivo.classList.add('legenda-ativa');
+
+            // **NOVA LÓGICA:** Adiciona a classe ao tempo do novo item ativo
+            const tempoNovo = itemAtivo.querySelector('.subtitle-time');
+            if (tempoNovo) {
+                tempoNovo.classList.add('tempo-ativo');
+            }
         }
-        
-        atualizarBotoes(); // Garante que os botões de navegação e linha estejam atualizados
+
+        atualizarBotoes();
         inputTexto.focus();
     }
     
