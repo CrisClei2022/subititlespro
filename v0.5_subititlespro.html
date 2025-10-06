@@ -330,9 +330,8 @@
     </section>
 
     <section id="area-legendas">
-        <p>Lista de Legendas (Clique em qualquer linha para editar)</p>
-        <div id="lista-legendas">
-            </div>
+        <p id="titulo-srt">Legendas (Clique em qualquer linha para editar)</p>
+        <div id="lista-legendas"></div>
     </section>
 
     <div id="info-overlay">
@@ -432,7 +431,6 @@
             itemDiv.classList.add('legenda-ativa');
         }
 
-        // --- TRECHO AJUSTADO AQUI ---
         // A classe 'tempo-ativo' é adicionada ao elemento subtitle-time se isAtiva for true
         const classeTempo = isAtiva ? ' tempo-ativo' : '';
 
@@ -440,7 +438,6 @@
             <div class="subtitle-time${classeTempo}">${legenda.inicio} --> ${legenda.fim}</div>
             <div class="subtitle-text">${legenda.texto}</div>
         `;
-        // -----------------------------
         
         // Adiciona o evento de clique para carregar o item para edição
         itemDiv.addEventListener('click', () => carregarLegendaParaEdicao(legenda.id, legendas));
@@ -499,6 +496,9 @@
     let videoPlayer = null;
     let stopTimeout = null;
 
+    // Variável Global (ou acessível)
+    let nomeArquivoSRT = 'SRT'; 
+
     /**
      * Carrega o vídeo e o SRT a partir das URLs/arquivos fornecidos
      */
@@ -507,37 +507,58 @@
         const srtUrl = document.getElementById('srtUrl').value.trim();
         const videoUpload = document.getElementById('videoUpload').files[0];
         const srtUpload = document.getElementById('srtUpload').files[0];
-    
+
+        // Referência ao elemento de título
+        const tituloSrtDiv = document.getElementById('titulo-srt');
+
         try {
-            // Carrega o vídeo
+            // Carrega o vídeo (sua lógica original)
             videoPlayer = document.getElementById('videoPlayer');
             if (videoUpload) {
                 videoPlayer.src = URL.createObjectURL(videoUpload);
             } else if (videoUrl) {
                 videoPlayer.src = videoUrl;
             }
-    
+
             // Carrega o SRT
             let srtContent = '';
+            nomeArquivoSRT = 'Legendas'; // Define um valor padrão
+
             if (srtUpload) {
                 srtContent = await srtUpload.text();
-                nomeArquivoSRT = srtUpload.name; // ← ADICIONE ESTA LINHA
+                nomeArquivoSRT = srtUpload.name;
             } else if (srtUrl) {
                 const response = await fetch(srtUrl);
                 if (!response.ok) throw new Error('Erro ao carregar arquivo SRT');
                 srtContent = await response.text();
+
                 // Tenta extrair o nome da URL
                 const urlParts = srtUrl.split('/');
-                nomeArquivoSRT = urlParts[urlParts.length - 1] || 'legenda.srt'; // ← ADICIONE ESTA LINHA
+                nomeArquivoSRT = urlParts[urlParts.length - 1] || 'legenda.srt';
             }
-    
+
             if (srtContent) {
                 carregarSRTnoEditor(srtContent);
+
+                // --- NOVO TRECHO ADICIONADO AQUI ---
+                if (tituloSrtDiv) {
+                    tituloSrtDiv.textContent = `${nomeArquivoSRT}`;
+                }
+                // ------------------------------------
+            } else {
+                // Se não carregou SRT, reseta o título
+                if (tituloSrtDiv) {
+                    tituloSrtDiv.textContent = 'Legendas (Clique em qualquer linha para editar)';
+                }
             }
-    
+
             closeLoadSaveArea();
         } catch (error) {
             showInfo('Erro ao carregar conteúdo: ' + error.message);
+            // Reseta o título em caso de erro de carregamento do SRT
+            if (tituloSrtDiv) {
+                tituloSrtDiv.textContent = 'Legendas (Clique em qualquer linha para editar)';
+            }
         }
     }
 
