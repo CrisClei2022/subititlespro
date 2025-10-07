@@ -1,0 +1,305 @@
+<!v0.0_modelo.html>
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Editor SRT com Undo/Redo e ajuste de tempo</title>
+<style>
+  body { font-family: Arial; margin: 20px; background: #f5f5f5; }
+  .segment { background: white; padding: 10px; border-radius: 10px; margin: 5px 0; cursor: pointer; transition: 0.2s; }
+  .segment:hover { background: #e7f0ff; transform: scale(1.01); }
+  .editor { background: white; border-radius: 10px; padding: 15px; margin-top: 15px; box-shadow: 0 0 5px rgba(0,0,0,0.1); }
+  input, textarea { width: calc(100% - 40px); margin-top: 5px; margin-bottom: 10px; padding: 6px; font-size: 14px; }
+  button { margin: 3px; padding: 6px 10px; font-size: 14px; cursor: pointer; }
+  .time-controls { display: flex; align-items: center; gap: 5px; }
+  label { font-weight: bold; display: block; margin-top: 10px; }
+</style>
+</head>
+<body>
+
+<h2>Legendas (SRT curto)</h2>
+<div id="segments"></div>
+
+<div class="editor" id="editor" style="display:none;">
+  <h3>Edição do trecho</h3>
+
+  <label>Início</label>
+  <div class="time-controls">
+    <input id="editStart">
+    <button onclick="adjustTime('start',  -TIME_STEP)">−</button>
+    <button onclick="adjustTime('start', +TIME_STEP)">+</button>
+  </div>
+
+  <label>Fim</label>
+  <div class="time-controls">
+    <input id="editEnd">
+    <button onclick="adjustTime('start', -TIME_STEP)">−</button>
+    <button onclick="adjustTime('end', +TIME_STEP)">+</button>
+  </div>
+
+  <label>Texto</label>
+  <textarea id="editText" rows="3"></textarea>
+
+  <button onclick="undo()">↩ Desfazer</button>
+  <button onclick="redo()">↪ Refazer</button>
+
+  <button onclick="prevLine()">◀◀</button>
+  <button onclick="nextLine()">▶▶</button>
+  
+  <button onclick="addSegment()">☰ ➕️</button>
+  <button onclick="removeSegment()">☰ ➖</button>
+</div>
+
+<script>
+const srtData = [
+  { id: 1, start: "00:00:01,000", end: "00:00:03,000", text: "Olá, mundo!" },
+  { id: 2, start: "00:00:04,000", end: "00:00:06,000", text: "Bem-vindo ao editor de legendas." },
+  { id: 3, start: "00:00:07,000", end: "00:00:09,000", text: "Aqui você pode editar e desfazer ações." }
+];
+
+let currentSegment = null;
+let undoStack = [];
+let redoStack = [];
+const TIME_STEP = 0.1; // segundos
+
+function renderSegments() {
+  const container = document.getElementById("segments");
+  container.innerHTML = "";
+  srtData.forEach(seg => {
+    const div = document.createElement("div");
+    div.className = "segment";
+    div.innerHTML = `<b>${seg.id}</b> [${seg.start} → ${seg.end}]<br>${seg.text}`;
+    div.onclick = () => openEditor(seg.id);
+    container.appendChild(div);
+  });
+}
+
+function openEditor(id) {
+  currentSegment = srtData.find(s => s.id === id);
+  if (!currentSegment) return;
+
+  document.getElementById("editor").style.display = "block";
+  document.getElementById("editStart").value = currentSegment.start;
+  document.getElementById("editEnd").value = currentSegment.end;
+  document.getElementById("editText").value = currentSegment.text;
+
+  document.getElementById("editStart").oninput = e => handleChange("start", e.target.value);
+  document.getElementById("editEnd").oninput = e => handleChange("end", e.target.value);
+  document.getElementById("editText").oninput = e => handleChange("text", e.target.value);
+}
+
+function handleChange(field, newValue) {
+  if (!currentSegment) return;
+  const oldValue = currentSegment[field];
+  if (oldValue === newValue) return;
+
+  // Cria uma cópia profunda do segmento ANTES da mudança
+  const oldSegment = { ...currentSegment };
+  
+  undoStack.push({ 
+    type: "edit",
+    id: currentSegment.id, 
+    field, 
+    oldValue, 
+    newValue,
+    segmentBackup: oldSegment // backup completo do segmento
+  });
+  redoStack = [];
+  currentSegment[field] = newValue;
+  renderSegments();
+}
+
+function adjustTime(field, deltaSeconds) {
+  if (!currentSegment) return;
+
+  const oldValue = currentSegment[field];
+  const newValue = shiftTime(oldValue, deltaSeconds);
+
+  const idx = srtData.findIndex(s => s.id === currentSegment.id);
+  const prev = srtData[idx - 1];
+  const next = srtData[idx + 1];
+
+  const toMs = t => {
+    const [h, m, rest] = t.split(":");
+    const [s, ms] = rest.split(",");
+    return (+h * 3600 + +m * 60 + +s) * 1000 + +ms;
+  };
+
+  const newMs = toMs(newValue);
+  const startMs = toMs(currentSegment.start);
+  const endMs = toMs(currentSegment.end);
+
+  if (field === "start" && prev && newMs <= toMs(prev.end) + 100) return;
+  if (field === "end" && next && newMs >= toMs(next.start) - 100) return;
+  if (field === "start" && newMs >= endMs - 100) return;
+  if (field === "end" && newMs <= startMs + 100) return;
+  
+  // Cria uma cópia profunda do segmento ANTES da mudança
+  const oldSegment = { ...currentSegment };
+  
+  undoStack.push({ 
+    type: "edit",
+    id: currentSegment.id, 
+    field, 
+    oldValue, 
+    newValue,
+    segmentBackup: oldSegment
+  });
+  redoStack = [];
+
+  currentSegment[field] = newValue;
+  updateEditorFields(currentSegment);
+  renderSegments();
+}
+
+function shiftTime(timeStr, delta) {
+  // "00:00:04,500" → soma delta (em segundos)
+  const [h, m, rest] = timeStr.split(":");
+  const [s, ms] = rest.split(",");
+  let totalMs = (+h * 3600 + +m * 60 + +s) * 1000 + +ms + delta * 1000;
+
+  if (totalMs < 0) totalMs = 0;
+  const hours = Math.floor(totalMs / 3600000);
+  const minutes = Math.floor((totalMs % 3600000) / 60000);
+  const seconds = Math.floor((totalMs % 60000) / 1000);
+  const millis = Math.floor(totalMs % 1000);
+  return `${pad(hours)}:${pad(minutes)}:${pad(seconds)},${pad(millis, 3)}`;
+}
+
+function pad(num, size=2) {
+  return num.toString().padStart(size, "0");
+}
+
+function undo() {
+  if (!undoStack.length) return;
+  const last = undoStack.pop();
+  redoStack.push(last);
+
+  if (last.type === "add") {
+    // Remove o segmento que foi adicionado no índice exato
+    srtData.splice(last.index, 1);
+    currentSegment = srtData[last.index] || srtData[last.index - 1] || null;
+  } else if (last.type === "remove") {
+    // Recoloca o segmento removido no índice exato
+    srtData.splice(last.index, 0, { ...last.segment });
+    currentSegment = srtData[last.index];
+  } else if (last.type === "edit") {
+    const seg = srtData.find(s => s.id === last.id);
+    if (seg) {
+      seg[last.field] = last.oldValue;
+      currentSegment = seg;
+    }
+  }
+
+  renderSegments();
+  if (currentSegment) updateEditorFields(currentSegment);
+}
+
+function redo() {
+  if (!redoStack.length) return;
+  const last = redoStack.pop();
+  undoStack.push(last);
+
+  if (last.type === "add") {
+    // Recoloca o segmento adicionado no índice exato
+    srtData.splice(last.index, 0, { ...last.segment });
+    currentSegment = srtData[last.index];
+  } else if (last.type === "remove") {
+    // Remove novamente o segmento do índice exato
+    srtData.splice(last.index, 1);
+    currentSegment = srtData[last.index] || srtData[last.index - 1] || null;
+  } else if (last.type === "edit") {
+    const seg = srtData.find(s => s.id === last.id);
+    if (seg) {
+      seg[last.field] = last.newValue;
+      currentSegment = seg;
+    }
+  }
+
+  renderSegments();
+  if (currentSegment) updateEditorFields(currentSegment);
+}
+
+function addSegment() {
+  let insertIndex = srtData.length;
+  if (currentSegment) {
+    const idx = srtData.findIndex(s => s.id === currentSegment.id);
+    insertIndex = idx + 1;
+  }
+
+  const newId = srtData.length > 0 ? Math.max(...srtData.map(s => s.id)) + 1 : 1;
+  const newSegment = {
+    id: newId,
+    start: "00:00:00,000",
+    end: "00:00:00,000",
+    text: "Novo trecho"
+  };
+  
+  srtData.splice(insertIndex, 0, newSegment);
+
+  undoStack.push({
+    type: "add",
+    segment: { ...newSegment },
+    index: insertIndex
+  });
+  redoStack = [];
+
+  currentSegment = newSegment;
+  renderSegments();
+  openEditor(currentSegment.id);
+}
+
+function removeSegment() {
+  if (!currentSegment) return;
+  if (srtData.length === 1) return alert("Não é possível remover o único segmento.");
+
+  const idx = srtData.findIndex(s => s.id === currentSegment.id);
+  const removedSegment = { ...srtData[idx] };
+  srtData.splice(idx, 1);
+
+  undoStack.push({
+    type: "remove",
+    segment: removedSegment,
+    index: idx
+  });
+  redoStack = [];
+
+  currentSegment = srtData[idx] || srtData[idx - 1] || null;
+
+  renderSegments();
+  if (currentSegment) openEditor(currentSegment.id);
+  else document.getElementById("editor").style.display = "none";
+}
+
+function updateEditorFields(seg) {
+  document.getElementById("editStart").value = seg.start;
+  document.getElementById("editEnd").value = seg.end;
+  document.getElementById("editText").value = seg.text;
+}
+
+document.addEventListener("keydown", e => {
+  if (e.ctrlKey && e.key === "z") { e.preventDefault(); undo(); }
+  if (e.ctrlKey && e.key === "y") { e.preventDefault(); redo(); }
+});
+
+function prevLine() {
+  if (!currentSegment) return;
+  const idx = srtData.findIndex(s => s.id === currentSegment.id);
+  if (idx > 0) {
+    openEditor(srtData[idx - 1].id);
+  }
+}
+
+function nextLine() {
+  if (!currentSegment) return;
+  const idx = srtData.findIndex(s => s.id === currentSegment.id);
+  if (idx < srtData.length - 1) {
+    openEditor(srtData[idx + 1].id);
+  }
+}
+
+renderSegments();
+</script>
+</body>
+</html>
