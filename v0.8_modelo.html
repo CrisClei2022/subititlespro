@@ -1,0 +1,687 @@
+<!v0.0_modelo.html>
+<!carregar conteudo via url ou upload>
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Editor SRT com Undo/Redo e ajuste de tempo</title>
+<style>
+  body { font-family: Arial; margin: 20px; background: #f5f5f5; }
+  .segment { background: white; padding: 10px; border-radius: 10px; margin: 5px 0; cursor: pointer; transition: 0.2s; }
+  .segment:hover { background: #e7f0ff; transform: scale(1.01); }
+
+  .video-section {
+      background: ;
+      padding: 20px;
+      border-radius: 8px;
+  }
+
+  video {
+      width: 100%;
+      border-radius: 4px;
+  }
+  .editor { 
+    background: white; 
+    border-radius: 10px; 
+    padding: 15px; 
+    margin-top: 15px; 
+    box-shadow: 0 0 5px rgba(0,0,0,0.1); 
+  }
+  
+  input, textarea { 
+    width: calc(100% - 40px); 
+    margin-top: 5px; 
+    margin-bottom: 10px; 
+    padding: 6px; 
+    font-size: 14px; 
+  }
+  
+  button { margin: 3px; padding: 6px 10px; font-size: 14px; cursor: pointer; }
+  .time-controls { display: flex; align-items: center; gap: 5px; }
+  label { font-weight: bold; display: block; margin-top: 10px; }
+  
+/* Estilo para o formulário (se você quiser que os itens fiquem um abaixo do outro) */
+form {
+  	display: flex;
+  	flex-direction: column;
+  	gap: 15px; /* Espaço entre cada opção */
+}
+
+form label {
+	font-size: 14px;
+}
+
+/* Estilo para cada par de radio + texto */
+.radio-option {
+  	display: flex;
+  	align-items: center; /* Alinha o botão e o texto verticalmente */
+  	cursor: pointer;
+  	gap: 8px; /* Ajuste este valor para controlar o espaço entre o botão e o texto */
+}
+  
+input[type="radio"] {
+    width: 15px;
+    height: 15px;
+}
+  
+</style>
+</head>
+<body>
+
+<header>
+    <h2>SUBTITLE PRO</h2>
+</header>
+
+<section id="load-area">
+    <span id="btn-close" onclick="closeLoadSaveArea()">&times;</span>
+    <p>📂 Abrir</p>
+    <div class="load-group">
+      	<label for="videoUpload" class="upload-btn">Upload Vídeo</label>
+      	<input type="text" id="videoUrl" placeholder="Cole a URL do vídeo ou faça o upload">
+      	<input type="file" id="videoUpload" accept="video/*">
+    </div>
+    <div class="load-group">
+      	<label for="srtUpload" class="upload-btn">Upload SRT</label>
+      	<input type="text" id="srtUrl" placeholder="Cole a URL da legenda (.srt) ou faça o upload">
+      	<input type="file" id="srtUpload" accept=".srt">
+    </div>
+            
+    <div class="botoes-container">
+    	<button id="btn-open" onclick="openContent()">Carregar</button>
+    </div>
+</section>
+
+<section id="save-area" class="hidden">
+    <span id="btn-close" onclick="closeLoadSaveArea()">&times;</span>
+    <p>💾 Salvar</p>
+    <div class="button-container">
+        <button onclick="copyToClipboard()">📋 Copiar</button>
+        <button onclick="downSrt()">⬇️ Download</button>
+        <button onclick="showSRT()">🧾 Exibir</button>
+    </div>
+</section>
+
+<section id="config-area" class="editor">
+    <span id="btn-close" onclick="closeLoadSaveArea()">&times;</span>
+    <p>⚙ Editar em Lote</p>
+    <div class="time-controls">
+      <input id="editStack" placeholder="0.05">
+      <button onclick="showEarlier()">Adiantar</button>
+      <button onclick="showLater()">Atrasar</button>
+    </div>
+
+    <form id="linhaForm">
+      <label class="radio-option">
+        <input type="radio" name="opcao-linha" value="all" checked>
+        Todas as linhas
+      </label>
+      <label class="radio-option">
+        <input type="radio" name="opcao-linha" value="current">
+        Apenas linha atual
+      </label>
+
+    <label class="radio-option">
+      <input type="radio" name="opcao-linha" value="from-current">
+      Linha selecionada e próximas linhas
+    </label>
+    </form>
+</section>
+
+<section class="editor" id="editor">
+  <div class="video-section">
+      <video id="videoPlayer" controls></video>
+  </div>
+  
+  <div id="editor-title">
+    <h3>Edição do trecho</h3>
+    <span id="btn-config" onclick="showConfig()">⚙ Editar em Lote</span>
+  </div>
+
+  <label>Início</label>
+  <div class="time-controls">
+    <input id="editStart">
+    <button onclick="adjustTime('start',  -TIME_STEP)">−</button>
+    <button onclick="adjustTime('start', +TIME_STEP)">+</button>
+    
+    <button onclick="undo()">↩</button>
+    <button onclick="redo()">↪</button>
+  </div>
+
+  <label>Fim</label>
+  <div class="time-controls">
+    <input id="editEnd">
+    <button onclick="adjustTime('end', -TIME_STEP)">−</button>
+    <button onclick="adjustTime('end', +TIME_STEP)">+</button>
+    
+    <button onclick="addSegment()">☰ ➕️</button>
+    <button onclick="removeSegment()">☰ ➖</button>
+  </div>
+
+  <label>Texto</label>
+  <textarea id="editText" rows="3"></textarea>
+
+  <button id="btn-load" onclick="showLoadArea()">📂</button>
+  <button onclick="prevLine()">◀◀</button>
+  <button onclick="playLine()">▶</button>
+  <button onclick="nextLine()">▶▶</button>
+  <button id="btn-save" onclick="showSaveArea()">💾</button>
+</section>
+
+<section id="segments-area">
+	<div id="segments"></div>
+</section>
+
+<script>
+const srtData = [
+  { id: 1, start: "00:00:01,000", end: "00:00:03,000", text: "Olá, mundo!" },
+  { id: 2, start: "00:00:04,000", end: "00:00:06,000", text: "Bem-vindo ao editor de legendas." },
+  { id: 3, start: "00:00:07,000", end: "00:00:09,000", text: "Aqui você pode editar e desfazer ações." }
+];
+
+let currentSegment = null;
+let undoStack = [];
+let redoStack = [];
+let TIME_STEP = 0.1; // segundos
+let isBatchEditing = false;
+
+// ====================================
+// --- Funções de Navegação (Views) ---
+// ====================================
+function showLoadArea() {
+    document.getElementById('save-area').style.display = "none";
+    document.getElementById('load-area').style.display = "block";
+    document.getElementById('editor').style.display = "none";
+    document.getElementById('segments-area').style.display = "none";
+    document.getElementById('config-area').style.display = "none";
+}
+
+function showSaveArea() {
+    document.getElementById('save-area').style.display = "block";
+    document.getElementById('load-area').style.display = "none";
+    document.getElementById('editor').style.display = "none";
+    document.getElementById('segments-area').style.display = "none";
+    document.getElementById('config-area').style.display = "none";
+}
+
+function closeLoadSaveArea() {
+	document.getElementById("load-area").style.display = "none";
+	document.getElementById("save-area").style.display = "none";
+    document.getElementById('editor').style.display = "block";
+    document.getElementById('segments-area').style.display = "block";
+    document.getElementById('config-area').style.display = "none";
+}
+
+function showConfig() {
+	document.getElementById("load-area").style.display = "none";
+	document.getElementById("save-area").style.display = "none";
+    document.getElementById('editor').style.display = "block";
+    document.getElementById('segments-area').style.display = "block";
+    document.getElementById('config-area').style.display = "block";
+}
+
+function renderSegments() {
+  const container = document.getElementById("segments");
+  container.innerHTML = "";
+  srtData.forEach(seg => {
+    const div = document.createElement("div");
+    div.className = "segment";
+    div.innerHTML = `<b>${seg.id}</b> [${seg.start} → ${seg.end}]<br>${seg.text}`;
+    div.onclick = () => openEditor(seg.id);
+    container.appendChild(div);
+  });
+}
+
+function openEditor(id) {
+  currentSegment = srtData.find(s => s.id === id);
+  if (!currentSegment) return;
+
+  document.getElementById("editor").style.display = "block";
+  document.getElementById("editStart").value = currentSegment.start;
+  document.getElementById("editEnd").value = currentSegment.end;
+  document.getElementById("editText").value = currentSegment.text;
+
+  document.getElementById("editStart").oninput = e => handleChange("start", e.target.value);
+  document.getElementById("editEnd").oninput = e => handleChange("end", e.target.value);
+  document.getElementById("editText").oninput = e => handleChange("text", e.target.value);
+}
+
+function handleChange(field, newValue) {
+  if (!currentSegment) return;
+  const oldValue = currentSegment[field];
+  if (oldValue === newValue) return;
+
+  // Cria uma cópia profunda do segmento ANTES da mudança
+  const oldSegment = { ...currentSegment };
+  
+  undoStack.push({ 
+    type: "edit",
+    id: currentSegment.id, 
+    field, 
+    oldValue, 
+    newValue,
+    segmentBackup: oldSegment // backup completo do segmento
+  });
+  redoStack = [];
+  currentSegment[field] = newValue;
+  renderSegments();
+}
+
+function adjustTime(field, deltaSeconds) {
+  if (!currentSegment) return;
+
+  const oldValue = currentSegment[field];
+  const newValue = shiftTime(oldValue, deltaSeconds);
+
+  const idx = srtData.findIndex(s => s.id === currentSegment.id);
+  const prev = srtData[idx - 1];
+  const next = srtData[idx + 1];
+
+  const toMs = t => {
+    const [h, m, rest] = t.split(":");
+    const [s, ms] = rest.split(",");
+    return (+h * 3600 + +m * 60 + +s) * 1000 + +ms;
+  };
+
+  const newMs = toMs(newValue);
+  const startMs = toMs(currentSegment.start);
+  const endMs = toMs(currentSegment.end);
+
+  if (field === "start" && prev && newMs <= toMs(prev.end) + 0) return;
+  if (field === "end" && next && newMs >= toMs(next.start) - 0) return;
+  if (field === "start" && newMs >= endMs - 0) return;
+  if (field === "end" && newMs <= startMs + 0) return;
+  
+  // Cria uma cópia profunda do segmento ANTES da mudança
+  const oldSegment = { ...currentSegment };
+  
+  if (!isBatchEditing) {
+    undoStack.push({ 
+      type: "edit",
+      id: currentSegment.id, 
+      field, 
+      oldValue, 
+      newValue,
+      segmentBackup: oldSegment
+    });
+    redoStack = [];
+  }
+
+  redoStack = [];
+
+  currentSegment[field] = newValue;
+  updateEditorFields(currentSegment);
+  renderSegments();
+}
+
+function shiftTime(timeStr, delta) {
+  // "00:00:04,500" → soma delta (em segundos)
+  const [h, m, rest] = timeStr.split(":");
+  const [s, ms] = rest.split(",");
+  let totalMs = (+h * 3600 + +m * 60 + +s) * 1000 + +ms + delta * 1000;
+
+  if (totalMs < 0) totalMs = 0;
+  const hours = Math.floor(totalMs / 3600000);
+  const minutes = Math.floor((totalMs % 3600000) / 60000);
+  const seconds = Math.floor((totalMs % 60000) / 1000);
+  const millis = Math.floor(totalMs % 1000);
+  return `${pad(hours)}:${pad(minutes)}:${pad(seconds)},${pad(millis, 3)}`;
+}
+
+function pad(num, size=2) {
+  return num.toString().padStart(size, "0");
+}
+
+// ======================
+// ↩ | ↪ | ☰ ➖ | ☰ ➕️
+// ======================
+function undo() {
+  if (!undoStack.length) return;
+  const last = undoStack.pop();
+  redoStack.push(last);
+
+  if (last.type === "add") {
+    // Restaura o array completo de antes da adição
+    srtData.length = 0;
+    srtData.push(...last.stateBefore.map(s => ({...s})));
+    currentSegment = srtData[last.currentIndex] || srtData[last.currentIndex - 1] || null;
+  } else if (last.type === "remove") {
+    // Restaura o array completo de antes da remoção
+    srtData.length = 0;
+    srtData.push(...last.stateBefore.map(s => ({...s})));
+    currentSegment = srtData.find(s => s.id === last.segment.id) || null;
+  } else if (last.type === "edit") {
+    const seg = srtData.find(s => s.id === last.id);
+    if (seg) {
+      seg[last.field] = last.oldValue;
+      currentSegment = seg;
+    }
+  } else if (last.type === "edit-multiple") {
+    srtData.length = 0;
+    srtData.push(...last.stateBefore.map(s => ({ ...s })));
+    currentSegment = srtData.find(s => s.id === currentSegment?.id) || srtData[0] || null;
+  }
+
+
+  renderSegments();
+  if (currentSegment) updateEditorFields(currentSegment);
+}
+
+function redo() {
+  if (!redoStack.length) return;
+  const last = redoStack.pop();
+  undoStack.push(last);
+
+  if (last.type === "add") {
+    // Restaura o array completo de depois da adição
+    srtData.length = 0;
+    srtData.push(...last.stateAfter.map(s => ({...s})));
+    currentSegment = srtData.find(s => s.id === last.segment.id) || null;
+  } else if (last.type === "remove") {
+    // Restaura o array completo de depois da remoção
+    srtData.length = 0;
+    srtData.push(...last.stateAfter.map(s => ({...s})));
+    currentSegment = srtData[last.currentIndex] || srtData[last.currentIndex - 1] || null;
+  } else if (last.type === "edit") {
+    const seg = srtData.find(s => s.id === last.id);
+    if (seg) {
+      seg[last.field] = last.newValue;
+      currentSegment = seg;
+    }
+  } else if (last.type === "edit-multiple") {
+    srtData.length = 0;
+    srtData.push(...last.stateAfter.map(s => ({ ...s })));
+    currentSegment = srtData.find(s => s.id === currentSegment?.id) || srtData[0] || null;
+  }
+
+  renderSegments();
+  if (currentSegment) updateEditorFields(currentSegment);
+}
+
+function addSegment() {
+  // Salva o estado ANTES da modificação
+  const stateBefore = srtData.map(s => ({...s}));
+  
+  let insertIndex = srtData.length;
+  if (currentSegment) {
+    const idx = srtData.findIndex(s => s.id === currentSegment.id);
+    insertIndex = idx + 1;
+  }
+
+  const newId = insertIndex + 1;
+  const newSegment = {
+    id: newId,
+    start: "00:00:00,000",
+    end: "00:00:00,000",
+    text: "Novo trecho"
+  };
+  
+  srtData.splice(insertIndex, 0, newSegment);
+  
+  // Renumera os IDs a partir do ponto de inserção
+  for (let i = insertIndex + 1; i < srtData.length; i++) {
+    srtData[i].id = i + 1;
+  }
+
+  // Salva o estado DEPOIS da modificação
+  const stateAfter = srtData.map(s => ({...s}));
+
+  undoStack.push({
+    type: "add",
+    segment: { ...newSegment },
+    stateBefore: stateBefore,
+    stateAfter: stateAfter,
+    currentIndex: insertIndex
+  });
+  redoStack = [];
+
+  currentSegment = newSegment;
+  renderSegments();
+  openEditor(currentSegment.id);
+}
+
+function removeSegment() {
+  if (!currentSegment) return;
+  if (srtData.length === 1) return alert("Não é possível remover o único segmento.");
+
+  // Salva o estado ANTES da modificação
+  const stateBefore = srtData.map(s => ({...s}));
+  
+  const idx = srtData.findIndex(s => s.id === currentSegment.id);
+  const removedSegment = { ...srtData[idx] };
+  srtData.splice(idx, 1);
+
+  // Renumera os IDs após a remoção
+  for (let i = idx; i < srtData.length; i++) {
+    srtData[i].id = i + 1;
+  }
+
+  // Salva o estado DEPOIS da modificação
+  const stateAfter = srtData.map(s => ({...s}));
+
+  undoStack.push({
+    type: "remove",
+    segment: removedSegment,
+    stateBefore: stateBefore,
+    stateAfter: stateAfter,
+    currentIndex: idx
+  });
+  redoStack = [];
+
+  currentSegment = srtData[idx] || srtData[idx - 1] || null;
+
+  renderSegments();
+  if (currentSegment) openEditor(currentSegment.id);
+  else document.getElementById("editor").style.display = "none";
+}
+
+function updateEditorFields(seg) {
+  document.getElementById("editStart").value = seg.start;
+  document.getElementById("editEnd").value = seg.end;
+  document.getElementById("editText").value = seg.text;
+}
+
+document.addEventListener("keydown", e => {
+  if (e.ctrlKey && e.key === "z") { e.preventDefault(); undo(); }
+  if (e.ctrlKey && e.key === "y") { e.preventDefault(); redo(); }
+});
+
+
+// ======================
+// ◀◀ | ▶▶
+// ======================
+function prevLine() {
+  if (!currentSegment) return;
+  const idx = srtData.findIndex(s => s.id === currentSegment.id);
+  if (idx > 0) {
+    openEditor(srtData[idx - 1].id);
+  }
+}
+
+function nextLine() {
+  if (!currentSegment) return;
+  const idx = srtData.findIndex(s => s.id === currentSegment.id);
+  if (idx < srtData.length - 1) {
+    openEditor(srtData[idx + 1].id);
+  }
+}
+
+// ======================
+// Etidar e lote
+// ======================
+function showEarlier() {
+  shiftSelectedLines(-getCurrentStep());
+}
+
+function showLater() {
+  shiftSelectedLines(+getCurrentStep());
+}
+
+function getCurrentStep() {
+  const input = document.getElementById("editStack").value.trim().replace(",", ".");
+  const step = parseFloat(input);
+  return isNaN(step) || step <= 0 ? TIME_STEP : step;
+}
+
+function shiftSelectedLines(delta) {
+  const selected = document.querySelector('input[name="opcao-linha"]:checked');
+  const value = selected ? selected.value : "current";
+
+  const stateBefore = srtData.map(s => ({ ...s }));
+  const prevSegment = currentSegment;
+
+  if (value === "all") {
+    isBatchEditing = true;
+    srtData.forEach(seg => {
+      currentSegment = seg;
+      adjustTime("start", delta);
+      adjustTime("end", delta);
+    });
+    isBatchEditing = false;
+  } else if (value === "from-current" && currentSegment) {
+    const startIdx = srtData.findIndex(s => s.id === currentSegment.id);
+    if (startIdx >= 0) {
+      isBatchEditing = true;
+      for (let i = startIdx; i < srtData.length; i++) {
+        currentSegment = srtData[i];
+        adjustTime("start", delta);
+        adjustTime("end", delta);
+      }
+      isBatchEditing = false;
+    }
+  } else if (value === "current" && currentSegment) {
+    adjustTime("start", delta);
+    adjustTime("end", delta);
+  }
+
+  const stateAfter = srtData.map(s => ({ ...s }));
+
+  undoStack.push({
+    type: "edit-multiple",
+    delta,
+    stateBefore,
+    stateAfter
+  });
+  redoStack = [];
+
+  currentSegment = prevSegment;
+  renderSegments();
+  if (currentSegment) updateEditorFields(currentSegment);
+}
+
+// ======================
+// Inicializar
+// ======================
+function init() {
+	showLoadArea();
+	renderSegments();
+}
+
+init();
+</script>
+
+<script>
+// ==================================
+// Funções de Carregamento
+// ==================================
+function openContent() {
+  const videoInput = document.getElementById("videoUrl").value.trim();
+  const videoUpload = document.getElementById("videoUpload").files[0];
+
+  const srtInput = document.getElementById("srtUrl").value.trim();
+  const srtUpload = document.getElementById("srtUpload").files[0];
+
+  if (videoUpload) {
+    const videoURL = URL.createObjectURL(videoUpload);
+    document.getElementById("videoPlayer").src = videoURL;
+  } else if (videoInput) {
+    document.getElementById("videoPlayer").src = videoInput;
+  }
+
+  if (srtUpload) {
+    const reader = new FileReader();
+    reader.onload = function (e) {
+      parseSRT(e.target.result);
+    };
+    reader.readAsText(srtUpload);
+  } else if (srtInput) {
+    fetch(srtInput)
+      .then(res => res.text())
+      .then(text => parseSRT(text))
+      .catch(err => alert("Erro ao carregar SRT por URL: " + err.message));
+  }
+
+  closeLoadSaveArea();
+}
+
+// Função para interpretar o conteúdo .srt para srtData
+function parseSRT(content) {
+  const lines = content.split(/\r?\n/);
+  const segments = [];
+  let i = 0;
+
+  while (i < lines.length) {
+    const id = parseInt(lines[i++]);
+    const time = lines[i++];
+
+    if (!time || !time.includes("-->")) continue;
+
+    const [start, end] = time.split("-->").map(s => s.trim().replace(".", ","));
+    let text = "";
+
+    while (i < lines.length && lines[i].trim() !== "") {
+      text += lines[i++] + "\n";
+    }
+
+    segments.push({
+      id,
+      start,
+      end,
+      text: text.trim()
+    });
+
+    while (i < lines.length && lines[i].trim() === "") i++;
+  }
+
+  srtData.length = 0;
+  srtData.push(...segments);
+  currentSegment = null;
+  undoStack = [];
+  redoStack = [];
+  renderSegments();
+}
+
+// Extra: botão de exibir SRT no editor
+function showSRT() {
+  const srt = generateSRT();
+  alert(srt);
+}
+
+function generateSRT() {
+  return srtData.map(seg => {
+    return `${seg.id}\n${seg.start} --> ${seg.end}\n${seg.text}`;
+  }).join("\n\n");
+}
+
+function copyToClipboard() {
+  const text = generateSRT();
+  navigator.clipboard.writeText(text).then(() => {
+    alert("Legendas copiadas para a área de transferência.");
+  });
+}
+
+function downSrt() {
+  const blob = new Blob([generateSRT()], { type: "text/plain;charset=utf-8" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = "legendas.srt";
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+</script>
+
+</body>
+</html>
